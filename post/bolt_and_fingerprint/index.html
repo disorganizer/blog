@@ -10,7 +10,7 @@
 <link rel="stylesheet" href="https://disorganizer.github.io/blog/css/style.css" type="text/css">
 <link rel="stylesheet" href="https://fonts.googleapis.com/css?family=Source+Code+Pro:400,700" type="text/css">
 <link rel="alternate" href="https://disorganizer.github.io/blog/index.xml" type="application/rss+xml" title="brig devlog">
-<title>bolt_and_fingerprint - brig devlog</title>
+<title>Making it persistent - brig devlog</title>
 </head>
 <body>
 
@@ -35,9 +35,68 @@
 
 
   </div>
-  <h1 class="headline" itemprop="headline">bolt_and_fingerprint</h1>
+  <h1 class="headline" itemprop="headline">Making it persistent</h1>
   <section class="body" itemprop="articleBody">
-    
+    <p>A bit more than one day after the last post. Not too bad.
+Basically, three smaller things happened since the last time.</p>
+
+<p>First, we now store files serialized as protobufs in the index persistently.
+The index is just a BoltDB database file (which I can recommend, it&rsquo;s nice).</p>
+
+<p>Secondly, the AES-key for each file is generated from the <code>sha512</code> hash of the
+first 8KB of a file. We don&rsquo;t hash the full file for performance reasons, but
+there is nothing stopping us from hashing the whole file, so we fully apply to
+<a href="https://en.wikipedia.org/wiki/Convergent_encryption">Wikipedia&rsquo;s definiton of convergent
+encryption</a>. The hash is
+then processed by <code>scrypt</code> with the filesize as salt. Currently, the key is
+also stored in the index.</p>
+
+<p>Finally, the commandline interface was cleared up a bit.
+We now use the <code>withXY</code> pattern which are usually popular in tests.
+Since we use <code>climax</code> as commandline library, we need to pass a callback
+handle for each subcommand we have (<code>add</code>, <code>cat</code>, etc.).
+Almost all of them have in common that they need to talk to the daemon
+and need a certain number of arguments to work.</p>
+
+<p>It would be nice to write something like this:</p>
+
+<pre><code class="language-go">	Handle: withArgCheck(needAtLeast(1), handleMount),
+</code></pre>
+
+<p>&hellip; which is nicely possible by writing a function that returns a closure:</p>
+
+<pre><code class="language-go">type CheckFunc func(ctx climax.Context) int
+
+func withArgCheck(checker CheckFunc, handler climax.CmdHandler) climax.CmdHandler {
+	return func(ctx climax.Context) int {
+		if checker(ctx) != Success {
+			return BadArgs
+		}
+
+		return handler(ctx)
+	}
+}
+
+func needAtLeast(min int) CheckFunc {
+	return func(ctx climax.Context) int {
+		if len(ctx.Args) &lt; min {
+			log.Warningf(&quot;Need at least %d arguments.&quot;, min)
+			return BadArgs
+		}
+
+		return Success
+	}
+}
+</code></pre>
+
+<p>Oh, as an extra: We&rsquo;re on GitHub now:</p>
+
+<pre><code>* https://github.com/disorganizer (source)
+* https://disorganizer.github.io/blog/index.html (blog)
+</code></pre>
+
+<p>That&rsquo;s it for now. The next days should bring some of the following:</p>
+
   </section>
 </article>
 
