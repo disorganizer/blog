@@ -4,7 +4,6 @@ title:       "A small step for mankind, a big step for brig"
 description: "First devlog entry"
 tags:        [ "Development", "Go", "brig"]
 topics:      [ "Development", "Go" ]
-slug:        "devlog"
 ---
 
 A small historic moment was achieved today: The very first file was added to

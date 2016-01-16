@@ -1,7 +1,9 @@
-+++
-date = "2016-01-16T18:44:51+01:00"
-title = "Making it persistent"
-+++
+---
+date: "2016-01-16T18:44:51+01:00"
+title: "Making it persistent"
+tags:   [ "Development", "Go", "brig"]
+topics: [ "Development", "Go" ]
+---
 
 A bit more than one day after the last post. Not too bad.
 Basically, three smaller things happened since the last time.
@@ -27,7 +29,7 @@ and need a certain number of arguments to work.
 It would be nice to write something like this:
 
 ```go
-	Handle: withArgCheck(needAtLeast(1), handleMount),
+	Handle: withArgCheck(needAtLeast(2), withDaemon(handleAdd)),
 ```
 
 ... which is nicely possible by writing a function that returns a closure:
@@ -59,7 +61,11 @@ func needAtLeast(min int) CheckFunc {
 
 Oh, as an extra: We're on GitHub now: 
 
-    * https://github.com/disorganizer (source)
-    * https://disorganizer.github.io/blog/index.html (blog)
+* https://github.com/disorganizer (source)
+* https://disorganizer.github.io/blog/index.html (blog)
 
 That's it for now. The next days should bring some of the following:
+
+- Make the index remember directories.
+- Recursively add directories.
+- A humble start on the FUSE layer.
