@@ -2,18 +2,18 @@
 <urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
   
   <url>
-    <loc>http://replace-this-with-your-hugo-site.com/</loc>
+    <loc>https://disorganizer.github.io/blog/public/</loc>
     <lastmod>2016-01-16T18:44:51+01:00</lastmod>
     <priority>0</priority>
   </url>
   
   <url>
-    <loc>http://replace-this-with-your-hugo-site.com/post/bolt_and_fingerprint/</loc>
+    <loc>https://disorganizer.github.io/blog/public/post/bolt_and_fingerprint/</loc>
     <lastmod>2016-01-16T18:44:51+01:00</lastmod>
   </url>
   
   <url>
-    <loc>http://replace-this-with-your-hugo-site.com/post/devlog/</loc>
+    <loc>https://disorganizer.github.io/blog/public/post/devlog/</loc>
     <lastmod>2016-01-15T01:13:07-07:00</lastmod>
   </url>
   
