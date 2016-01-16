@@ -38,7 +38,7 @@ and need a certain number of arguments to work.&lt;/p&gt;
 
 &lt;p&gt;It would be nice to write something like this:&lt;/p&gt;
 
-&lt;pre&gt;&lt;code class=&#34;language-go&#34;&gt;	Handle: withArgCheck(needAtLeast(1), handleMount),
+&lt;pre&gt;&lt;code class=&#34;language-go&#34;&gt;	Handle: withArgCheck(needAtLeast(2), withDaemon(handleAdd)),
 &lt;/code&gt;&lt;/pre&gt;
 
 &lt;p&gt;&amp;hellip; which is nicely possible by writing a function that returns a closure:&lt;/p&gt;
@@ -69,20 +69,27 @@ func needAtLeast(min int) CheckFunc {
 
 &lt;p&gt;Oh, as an extra: We&amp;rsquo;re on GitHub now:&lt;/p&gt;
 
-&lt;pre&gt;&lt;code&gt;* https://github.com/disorganizer (source)
-* https://disorganizer.github.io/blog/index.html (blog)
-&lt;/code&gt;&lt;/pre&gt;
+&lt;ul&gt;
+&lt;li&gt;&lt;a href=&#34;https://github.com/disorganizer&#34;&gt;https://github.com/disorganizer&lt;/a&gt; (source)&lt;/li&gt;
+&lt;li&gt;&lt;a href=&#34;https://disorganizer.github.io/blog/index.html&#34;&gt;https://disorganizer.github.io/blog/index.html&lt;/a&gt; (blog)&lt;/li&gt;
+&lt;/ul&gt;
 
 &lt;p&gt;That&amp;rsquo;s it for now. The next days should bring some of the following:&lt;/p&gt;
+
+&lt;ul&gt;
+&lt;li&gt;Make the index remember directories.&lt;/li&gt;
+&lt;li&gt;Recursively add directories.&lt;/li&gt;
+&lt;li&gt;A humble start on the FUSE layer.&lt;/li&gt;
+&lt;/ul&gt;
 </description>
     </item>
     
     <item>
       <title>A small step for mankind, a big step for brig</title>
-      <link>https://disorganizer.github.io/blog/post/devlog/</link>
+      <link>https://disorganizer.github.io/blog/post/first_steps/</link>
       <pubDate>Fri, 15 Jan 2016 01:13:07 -0700</pubDate>
       
-      <guid>https://disorganizer.github.io/blog/post/devlog/</guid>
+      <guid>https://disorganizer.github.io/blog/post/first_steps/</guid>
       <description>&lt;p&gt;A small historic moment was achieved today: The very first file was added to
 &lt;code&gt;brig&lt;/code&gt;. There was no way to get it out again, but hey - Progress comes in
 steps. Luckily, just two hours later there was a &lt;code&gt;brig get&lt;/code&gt; command that

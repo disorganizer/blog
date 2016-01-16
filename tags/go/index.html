@@ -28,7 +28,22 @@
   
     
 <article class="list-item" itemscope itemtype="http://schema.org/Blog">
-  <h2 class="headline" itemprop="headline"><a href="https://disorganizer.github.io/blog/post/devlog/">A small step for mankind, a big step for brig</a></h2>
+  <h2 class="headline" itemprop="headline"><a href="https://disorganizer.github.io/blog/post/bolt_and_fingerprint/">Making it persistent</a></h2>
+  <div class="meta">
+
+    <span class="key">published on</span>
+    <span class="val"><time itemprop="datePublished" datetime="2016-01-16">January 16, 2016</time></span>
+
+  </div>
+  <section class="summary">
+    A bit more than one day after the last post. Not too bad. Basically, three smaller things happened since the last time. First, we now store files serialized as protobufs in the index persistently. The index is just a BoltDB database file (which I can recommend, it&rsquo;s nice). Secondly, the AES-key for each file is generated from the sha512 hash of the first 8KB of a file. We don&rsquo;t hash the full file for performance reasons, but there is nothing stopping us from hashing the whole file, so we fully apply to Wikipedia&rsquo;s definiton of convergent encryption.  <a href="https://disorganizer.github.io/blog/post/bolt_and_fingerprint/">Read More...</a>
+  </section>
+</article>
+
+  
+    
+<article class="list-item" itemscope itemtype="http://schema.org/Blog">
+  <h2 class="headline" itemprop="headline"><a href="https://disorganizer.github.io/blog/post/first_steps/">A small step for mankind, a big step for brig</a></h2>
   <div class="meta">
 
     <span class="key">published on</span>
@@ -36,7 +51,7 @@
 
   </div>
   <section class="summary">
-    A small historic moment was achieved today: The very first file was added to brig. There was no way to get it out again, but hey - Progress comes in steps. Luckily, just two hours later there was a brig get command that could retrieve the file again from ipfs. This is also my very first devlog entry, so&hellip; Hi. I mainly write this to remember what I did (and when) on the course of the project.  <a href="https://disorganizer.github.io/blog/post/devlog/">Read More...</a>
+    A small historic moment was achieved today: The very first file was added to brig. There was no way to get it out again, but hey - Progress comes in steps. Luckily, just two hours later there was a brig get command that could retrieve the file again from ipfs. This is also my very first devlog entry, so&hellip; Hi. I mainly write this to remember what I did (and when) on the course of the project.  <a href="https://disorganizer.github.io/blog/post/first_steps/">Read More...</a>
   </section>
 </article>
 

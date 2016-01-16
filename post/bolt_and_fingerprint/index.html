@@ -34,6 +34,18 @@
 
 
 
+    <br>
+    <span class="key">tags:</span>
+    <span class="val">
+
+        <a href="https://disorganizer.github.io/blogtags/development">Development</a>
+
+        <a href="https://disorganizer.github.io/blogtags/go">Go</a>
+
+        <a href="https://disorganizer.github.io/blogtags/brig">brig</a>
+
+    </span>
+
   </div>
   <h1 class="headline" itemprop="headline">Making it persistent</h1>
   <section class="body" itemprop="articleBody">
@@ -60,7 +72,7 @@ and need a certain number of arguments to work.</p>
 
 <p>It would be nice to write something like this:</p>
 
-<pre><code class="language-go">	Handle: withArgCheck(needAtLeast(1), handleMount),
+<pre><code class="language-go">	Handle: withArgCheck(needAtLeast(2), withDaemon(handleAdd)),
 </code></pre>
 
 <p>&hellip; which is nicely possible by writing a function that returns a closure:</p>
@@ -91,11 +103,18 @@ func needAtLeast(min int) CheckFunc {
 
 <p>Oh, as an extra: We&rsquo;re on GitHub now:</p>
 
-<pre><code>* https://github.com/disorganizer (source)
-* https://disorganizer.github.io/blog/index.html (blog)
-</code></pre>
+<ul>
+<li><a href="https://github.com/disorganizer">https://github.com/disorganizer</a> (source)</li>
+<li><a href="https://disorganizer.github.io/blog/index.html">https://disorganizer.github.io/blog/index.html</a> (blog)</li>
+</ul>
 
 <p>That&rsquo;s it for now. The next days should bring some of the following:</p>
+
+<ul>
+<li>Make the index remember directories.</li>
+<li>Recursively add directories.</li>
+<li>A humble start on the FUSE layer.</li>
+</ul>
 
   </section>
 </article>
