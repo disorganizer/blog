@@ -3,4 +3,4 @@ languageCode = "en-us"
 title = "brig devlog"
 theme = "base16"
 pygmentsuseclasses = true
-canonifyurls: true
+canonifyurls = true
