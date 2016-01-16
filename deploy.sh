@@ -1,12 +1,20 @@
-#!/bin/sh
+#!/bin/bash
 
-rm public -rf
+echo -e "\033[0;32mDeploying updates to GitHub...\033[0m"
+
+# Build the project.
 hugo
-cp public /tmp/devlog -r
-git checkout gh-pages
-rm * -rf 
-cp /tmp/devlog/* . -r
-git add .
-git commit -am "Update blog $date"
-git push
-git checkout master
+
+# Add changes to git.
+git add -A
+
+# Commit changes.
+msg="rebuilding site `date`"
+if [ $# -eq 1 ]
+  then msg="$1"
+fi
+git commit -m "$msg"
+
+# Push source and build repos.
+git push origin master
+git subtree push --prefix=public origin gh-pages
