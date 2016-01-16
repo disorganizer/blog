@@ -1,0 +1,20 @@
+<?xml version="1.0" encoding="utf-8" standalone="yes" ?>
+<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
+  
+  <url>
+    <loc>https://disorganizer.github.io/blog/</loc>
+    <lastmod>2016-01-16T18:44:51+01:00</lastmod>
+    <priority>0</priority>
+  </url>
+  
+  <url>
+    <loc>https://disorganizer.github.io/blog/post/bolt_and_fingerprint/</loc>
+    <lastmod>2016-01-16T18:44:51+01:00</lastmod>
+  </url>
+  
+  <url>
+    <loc>https://disorganizer.github.io/blog/post/devlog/</loc>
+    <lastmod>2016-01-15T01:13:07-07:00</lastmod>
+  </url>
+  
+</urlset>
