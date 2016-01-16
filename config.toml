@@ -2,5 +2,5 @@ baseurl = "https://disorganizer.github.io/blog"
 languageCode = "en-us"
 title = "brig devlog"
 theme = "base16"
-pygmentsuseclasses = true
+pygmentsUseClasses = true
 canonifyurls = true
