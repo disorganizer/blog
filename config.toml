@@ -1,4 +1,4 @@
-baseurl = "http://replace-this-with-your-hugo-site.com/"
+baseurl = "https://disorganizer.github.io/blog"
 languageCode = "en-us"
 title = "brig devlog"
 theme = "base16"
