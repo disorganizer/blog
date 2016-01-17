@@ -10,7 +10,7 @@
 <link rel="stylesheet" href="https://disorganizer.github.io/blog/css/style.css" type="text/css">
 <link rel="stylesheet" href="https://fonts.googleapis.com/css?family=Source+Code+Pro:400,700" type="text/css">
 <link rel="alternate" href="https://disorganizer.github.io/blog/index.xml" type="application/rss+xml" title="brig devlog">
-<title>Making it persistent - brig devlog</title>
+<title>Stacking closures and more - brig devlog</title>
 </head>
 <body>
 
@@ -47,7 +47,7 @@
     </span>
 
   </div>
-  <h1 class="headline" itemprop="headline">Making it persistent</h1>
+  <h1 class="headline" itemprop="headline">Stacking closures and more</h1>
   <section class="body" itemprop="articleBody">
     <p>A bit more than one day after the last post. Not too bad.
 Basically, three smaller things happened since the last time.</p>
@@ -72,34 +72,38 @@ and need a certain number of arguments to work.</p>
 
 <p>It would be nice to write something like this:</p>
 
-<pre><code class="language-go">	Handle: withArgCheck(needAtLeast(2), withDaemon(handleAdd)),
-</code></pre>
+<div class="highlight" style="background: #272822"><pre style="line-height: 125%"><span style="color: #75715e">// ...</span>
+<span style="color: #a6e22e">Handle</span><span style="color: #f8f8f2">:</span> <span style="color: #a6e22e">withArgCheck</span><span style="color: #f8f8f2">(</span><span style="color: #a6e22e">needAtLeast</span><span style="color: #f8f8f2">(</span><span style="color: #ae81ff">2</span><span style="color: #f8f8f2">),</span> <span style="color: #a6e22e">withDaemon</span><span style="color: #f8f8f2">(</span><span style="color: #a6e22e">handleAdd</span><span style="color: #f8f8f2">)),</span>
+<span style="color: #75715e">// ...</span>
+</pre></div>
+
 
 <p>&hellip; which is nicely possible by writing a function that returns a closure:</p>
 
-<pre><code class="language-go">type CheckFunc func(ctx climax.Context) int
+<p><div class="highlight" style="background: #272822"><pre style="line-height: 125%"><span style="color: #66d9ef">type</span> <span style="color: #a6e22e">CheckFunc</span> <span style="color: #66d9ef">func</span><span style="color: #f8f8f2">(</span><span style="color: #a6e22e">ctx</span> <span style="color: #a6e22e">climax</span><span style="color: #f8f8f2">.</span><span style="color: #a6e22e">Context</span><span style="color: #f8f8f2">)</span> <span style="color: #66d9ef">int</span>
 
-func withArgCheck(checker CheckFunc, handler climax.CmdHandler) climax.CmdHandler {
-	return func(ctx climax.Context) int {
-		if checker(ctx) != Success {
-			return BadArgs
-		}
+<span style="color: #66d9ef">func</span> <span style="color: #a6e22e">withArgCheck</span><span style="color: #f8f8f2">(</span><span style="color: #a6e22e">checker</span> <span style="color: #a6e22e">CheckFunc</span><span style="color: #f8f8f2">,</span> <span style="color: #a6e22e">handler</span> <span style="color: #a6e22e">climax</span><span style="color: #f8f8f2">.</span><span style="color: #a6e22e">CmdHandler</span><span style="color: #f8f8f2">)</span> <span style="color: #a6e22e">climax</span><span style="color: #f8f8f2">.</span><span style="color: #a6e22e">CmdHandler</span> <span style="color: #f8f8f2">{</span>
+	<span style="color: #66d9ef">return</span> <span style="color: #66d9ef">func</span><span style="color: #f8f8f2">(</span><span style="color: #a6e22e">ctx</span> <span style="color: #a6e22e">climax</span><span style="color: #f8f8f2">.</span><span style="color: #a6e22e">Context</span><span style="color: #f8f8f2">)</span> <span style="color: #66d9ef">int</span> <span style="color: #f8f8f2">{</span>
+		<span style="color: #66d9ef">if</span> <span style="color: #a6e22e">checker</span><span style="color: #f8f8f2">(</span><span style="color: #a6e22e">ctx</span><span style="color: #f8f8f2">)</span> <span style="color: #f92672">!=</span> <span style="color: #a6e22e">Success</span> <span style="color: #f8f8f2">{</span>
+			<span style="color: #66d9ef">return</span> <span style="color: #a6e22e">BadArgs</span>
+		<span style="color: #f8f8f2">}</span>
 
-		return handler(ctx)
-	}
-}
+		<span style="color: #66d9ef">return</span> <span style="color: #a6e22e">handler</span><span style="color: #f8f8f2">(</span><span style="color: #a6e22e">ctx</span><span style="color: #f8f8f2">)</span>
+	<span style="color: #f8f8f2">}</span>
+<span style="color: #f8f8f2">}</span>
 
-func needAtLeast(min int) CheckFunc {
-	return func(ctx climax.Context) int {
-		if len(ctx.Args) &lt; min {
-			log.Warningf(&quot;Need at least %d arguments.&quot;, min)
-			return BadArgs
-		}
+<span style="color: #66d9ef">func</span> <span style="color: #a6e22e">needAtLeast</span><span style="color: #f8f8f2">(</span><span style="color: #a6e22e">min</span> <span style="color: #66d9ef">int</span><span style="color: #f8f8f2">)</span> <span style="color: #a6e22e">CheckFunc</span> <span style="color: #f8f8f2">{</span>
+	<span style="color: #66d9ef">return</span> <span style="color: #66d9ef">func</span><span style="color: #f8f8f2">(</span><span style="color: #a6e22e">ctx</span> <span style="color: #a6e22e">climax</span><span style="color: #f8f8f2">.</span><span style="color: #a6e22e">Context</span><span style="color: #f8f8f2">)</span> <span style="color: #66d9ef">int</span> <span style="color: #f8f8f2">{</span>
+		<span style="color: #66d9ef">if</span> <span style="color: #f8f8f2">len(</span><span style="color: #a6e22e">ctx</span><span style="color: #f8f8f2">.</span><span style="color: #a6e22e">Args</span><span style="color: #f8f8f2">)</span> <span style="color: #f8f8f2">&lt;</span> <span style="color: #a6e22e">min</span> <span style="color: #f8f8f2">{</span>
+			<span style="color: #a6e22e">log</span><span style="color: #f8f8f2">.</span><span style="color: #a6e22e">Warningf</span><span style="color: #f8f8f2">(</span><span style="color: #e6db74">&quot;Need at least %d arguments.&quot;</span><span style="color: #f8f8f2">,</span> <span style="color: #a6e22e">min</span><span style="color: #f8f8f2">)</span>
+			<span style="color: #66d9ef">return</span> <span style="color: #a6e22e">BadArgs</span>
+		<span style="color: #f8f8f2">}</span>
 
-		return Success
-	}
-}
-</code></pre>
+		<span style="color: #66d9ef">return</span> <span style="color: #a6e22e">Success</span>
+	<span style="color: #f8f8f2">}</span>
+<span style="color: #f8f8f2">}</span>
+</pre></div>
+</p>
 
 <p>Oh, as an extra: We&rsquo;re on GitHub now:</p>
 
