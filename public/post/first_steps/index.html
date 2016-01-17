@@ -74,34 +74,34 @@ but you just have a <code>io.Writer</code>, then <code>io.Pipe()</code> should p
 
 <p>Here&rsquo;s how it looks in practice:</p>
 
-<pre><code class="language-go">func NewFileReader(key []byte, r io.Reader) (io.Reader, error) {
-	pr, pw := io.Pipe()
+<div class="highlight" style="background: #272822"><pre style="line-height: 125%"><span style="color: #66d9ef">func</span> <span style="color: #a6e22e">NewFileReader</span><span style="color: #f8f8f2">(</span><span style="color: #a6e22e">key</span> <span style="color: #f8f8f2">[]</span><span style="color: #66d9ef">byte</span><span style="color: #f8f8f2">,</span> <span style="color: #a6e22e">r</span> <span style="color: #a6e22e">io</span><span style="color: #f8f8f2">.</span><span style="color: #a6e22e">Reader</span><span style="color: #f8f8f2">)</span> <span style="color: #f8f8f2">(</span><span style="color: #a6e22e">io</span><span style="color: #f8f8f2">.</span><span style="color: #a6e22e">Reader</span><span style="color: #f8f8f2">,</span> <span style="color: #66d9ef">error</span><span style="color: #f8f8f2">)</span> <span style="color: #f8f8f2">{</span>
+	<span style="color: #a6e22e">pr</span><span style="color: #f8f8f2">,</span> <span style="color: #a6e22e">pw</span> <span style="color: #f92672">:=</span> <span style="color: #a6e22e">io</span><span style="color: #f8f8f2">.</span><span style="color: #a6e22e">Pipe</span><span style="color: #f8f8f2">()</span>
 
-	// Setup the writer part:
-	wEnc, err := encrypt.NewWriter(pw, key)
-	if err != nil {
-		return nil, err
-	}
+	<span style="color: #75715e">// Setup the writer part:</span>
+	<span style="color: #a6e22e">wEnc</span><span style="color: #f8f8f2">,</span> <span style="color: #a6e22e">err</span> <span style="color: #f92672">:=</span> <span style="color: #a6e22e">encrypt</span><span style="color: #f8f8f2">.</span><span style="color: #a6e22e">NewWriter</span><span style="color: #f8f8f2">(</span><span style="color: #a6e22e">pw</span><span style="color: #f8f8f2">,</span> <span style="color: #a6e22e">key</span><span style="color: #f8f8f2">)</span>
+	<span style="color: #66d9ef">if</span> <span style="color: #a6e22e">err</span> <span style="color: #f92672">!=</span> <span style="color: #66d9ef">nil</span> <span style="color: #f8f8f2">{</span>
+		<span style="color: #66d9ef">return</span> <span style="color: #66d9ef">nil</span><span style="color: #f8f8f2">,</span> <span style="color: #a6e22e">err</span>
+	<span style="color: #f8f8f2">}</span>
 
-	wZip := compress.NewWriter(wEnc)
+	<span style="color: #a6e22e">wZip</span> <span style="color: #f92672">:=</span> <span style="color: #a6e22e">compress</span><span style="color: #f8f8f2">.</span><span style="color: #a6e22e">NewWriter</span><span style="color: #f8f8f2">(</span><span style="color: #a6e22e">wEnc</span><span style="color: #f8f8f2">)</span>
 
-	// Suck the reader empty and move it to `wZip`.
-	// Every write to wZip will be available as read in `pr`.
-	go func() {
-		defer func() {
-			wEnc.Close()
-			pw.Close()
-		}()
+	<span style="color: #75715e">// Suck the reader empty and move it to `wZip`.</span>
+	<span style="color: #75715e">// Every write to wZip will be available as read in `pr`.</span>
+	<span style="color: #66d9ef">go</span> <span style="color: #66d9ef">func</span><span style="color: #f8f8f2">()</span> <span style="color: #f8f8f2">{</span>
+		<span style="color: #66d9ef">defer</span> <span style="color: #66d9ef">func</span><span style="color: #f8f8f2">()</span> <span style="color: #f8f8f2">{</span>
+			<span style="color: #a6e22e">wEnc</span><span style="color: #f8f8f2">.</span><span style="color: #a6e22e">Close</span><span style="color: #f8f8f2">()</span>
+			<span style="color: #a6e22e">pw</span><span style="color: #f8f8f2">.</span><span style="color: #a6e22e">Close</span><span style="color: #f8f8f2">()</span>
+		<span style="color: #f8f8f2">}()</span>
 
-		if _, err := io.Copy(wZip, r); err != nil {
-			// TODO: Warn or pass to outside?
-			log.Warningf(&quot;add: copy: %v&quot;, err)
-		}
-	}()
+		<span style="color: #66d9ef">if</span> <span style="color: #a6e22e">_</span><span style="color: #f8f8f2">,</span> <span style="color: #a6e22e">err</span> <span style="color: #f92672">:=</span> <span style="color: #a6e22e">io</span><span style="color: #f8f8f2">.</span><span style="color: #a6e22e">Copy</span><span style="color: #f8f8f2">(</span><span style="color: #a6e22e">wZip</span><span style="color: #f8f8f2">,</span> <span style="color: #a6e22e">r</span><span style="color: #f8f8f2">);</span> <span style="color: #a6e22e">err</span> <span style="color: #f92672">!=</span> <span style="color: #66d9ef">nil</span> <span style="color: #f8f8f2">{</span>
+			<span style="color: #a6e22e">log</span><span style="color: #f8f8f2">.</span><span style="color: #a6e22e">Warningf</span><span style="color: #f8f8f2">(</span><span style="color: #e6db74">&quot;add: copy: %v&quot;</span><span style="color: #f8f8f2">,</span> <span style="color: #a6e22e">err</span><span style="color: #f8f8f2">)</span>
+		<span style="color: #f8f8f2">}</span>
+	<span style="color: #f8f8f2">}()</span>
 
-	return pr, nil
-}
-</code></pre>
+	<span style="color: #66d9ef">return</span> <span style="color: #a6e22e">pr</span><span style="color: #f8f8f2">,</span> <span style="color: #66d9ef">nil</span>
+<span style="color: #f8f8f2">}</span>
+</pre></div>
+
 
 <p>That&rsquo;s all for today! For tomorrow a cleanup session is planned and the piece
 of code that derives the AES-Key from an unencrypted file.</p>

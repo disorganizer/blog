@@ -1,6 +1,6 @@
 ---
 date:        "2016-01-15T01:13:07-07:00"
-title:       "A small step for mankind, a big step for brig"
+title:       "A brig step for mankind"
 description: "First devlog entry"
 tags:        [ "Development", "Go", "brig"]
 topics:      [ "Development", "Go" ]
@@ -31,7 +31,7 @@ but you just have a ``io.Writer``, then ``io.Pipe()`` should pop into your mind 
 
 Here's how it looks in practice:
 
-```go
+{{< highlight go>}}
 func NewFileReader(key []byte, r io.Reader) (io.Reader, error) {
 	pr, pw := io.Pipe()
 
@@ -52,14 +52,13 @@ func NewFileReader(key []byte, r io.Reader) (io.Reader, error) {
 		}()
 
 		if _, err := io.Copy(wZip, r); err != nil {
-			// TODO: Warn or pass to outside?
 			log.Warningf("add: copy: %v", err)
 		}
 	}()
 
 	return pr, nil
 }
-```
+{{< /highlight >}}
 
 That's all for today! For tomorrow a cleanup session is planned and the piece
 of code that derives the AES-Key from an unencrypted file.

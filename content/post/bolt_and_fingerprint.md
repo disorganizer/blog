@@ -1,6 +1,6 @@
 ---
 date: "2016-01-16T18:44:51+01:00"
-title: "Making it persistent"
+title: "Stacking closures and more"
 tags:   [ "Development", "Go", "brig"]
 topics: [ "Development", "Go" ]
 ---
@@ -28,13 +28,15 @@ and need a certain number of arguments to work.
 
 It would be nice to write something like this:
 
-```go
-	Handle: withArgCheck(needAtLeast(2), withDaemon(handleAdd)),
-```
+{{< highlight go>}}
+// ...
+Handle: withArgCheck(needAtLeast(2), withDaemon(handleAdd)),
+// ...
+{{< /highlight >}}
 
 ... which is nicely possible by writing a function that returns a closure:
 
-```go
+{{< highlight go>}}
 type CheckFunc func(ctx climax.Context) int
 
 func withArgCheck(checker CheckFunc, handler climax.CmdHandler) climax.CmdHandler {
@@ -57,7 +59,7 @@ func needAtLeast(min int) CheckFunc {
 		return Success
 	}
 }
-```
+{{< /highlight >}}
 
 Oh, as an extra: We're on GitHub now: 
 
