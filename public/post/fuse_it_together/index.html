@@ -1,0 +1,123 @@
+<!DOCTYPE html>
+<html lang="en-us">
+<head>
+<meta charset="utf-8">
+<meta name="description" content="">
+<meta name="keywords" content="">
+<meta name="author" content="">
+<meta name="generator" content="Hugo 0.16-DEV" />
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<link rel="stylesheet" href="https://disorganizer.github.io/blog/css/style.css" type="text/css">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css?family=Source+Code+Pro:400,700" type="text/css">
+<link rel="alternate" href="https://disorganizer.github.io/blog/index.xml" type="application/rss+xml" title="brig devlog">
+<title>Fusing it together - brig devlog</title>
+</head>
+<body>
+
+<header>
+  <div class="container">
+    <a class="path" href="https://disorganizer.github.io/blog">[brig devlog]</a>
+    <span class="caret"># _</span>
+  </div>
+</header>
+
+<div class="container">
+
+
+<main role="main" class="article">
+  
+<article class="single" itemscope itemtype="http://schema.org/BlogPosting">
+  <div class="meta">
+
+    <span class="key">published on</span>
+    <span class="val"><time itemprop="datePublished" datetime="2016-01-16">January 16, 2016</time></span>
+
+
+
+    <br>
+    <span class="key">tags:</span>
+    <span class="val">
+
+        <a href="https://disorganizer.github.io/blogtags/development">Development</a>
+
+        <a href="https://disorganizer.github.io/blogtags/go">Go</a>
+
+        <a href="https://disorganizer.github.io/blogtags/brig">brig</a>
+
+    </span>
+
+  </div>
+  <h1 class="headline" itemprop="headline">Fusing it together</h1>
+  <section class="body" itemprop="articleBody">
+    <p>Another productive day, another update late in the night.</p>
+
+<p>A basic FUSE layer is integrated and is already able to display
+the contents of a <code>util.trie.Trie</code> as files and directories.
+Reading and writing is not yet implemented, since that&rsquo;s the
+part where fuse and brig actually need to&hellip; fuse.</p>
+
+<p>Here&rsquo;s a small session inside the fuse layer:</p>
+
+<div class="highlight" style="background: #272822"><pre style="line-height: 125%">λ ~ → brig mount /tmp/mount <span style="color: #f92672">&amp;&amp;</span> <span style="color: #f8f8f2">cd</span> /tmp/mount
+λ /tmp/mount → touch hello  <span style="color: #75715e"># Creating file work. </span>
+λ /tmp/mount → cat hello    <span style="color: #75715e"># Although they contain weird stuff.</span>
+NaNaNaNaNaNaNaNaNaNaNaNaNaNaNaNaNaNaNaNaNaNaNaNaNaNaNaNaNa
+NaNaNaNaNaNaNaNaNaNaNaNaNaNaNaNaNaNaNaNaNaNaNaNaNaNaNaNaNa
+NaNaNaNaNaNaNaNaNaNaNaNaNaNaNaNaNaNaNaNaNaNaNaNaNaNaNaNaNa
+NaNaNaNaNaNaNaNaNaNaNaNaNa%
+λ /tmp/mount → stat hello   <span style="color: #75715e"># Every file is 200 bytes in size currently.</span>
+File: „hello“
+<span style="color: #f92672">(</span>...<span style="color: #f92672">)</span> Size: <span style="color: #ae81ff">200</span>  <span style="color: #f92672">(</span>...<span style="color: #f92672">)</span>
+λ /tmp/mount → ls           <span style="color: #75715e"># Also enumerating the directory.</span>
+hello  <span style="color: #f8f8f2">test</span>
+λ /tmp/mount → mkdir new    <span style="color: #75715e"># Adding directories even somehow works.</span>
+hello  new  <span style="color: #f8f8f2">test</span>
+$ brig mount -u /tmp/mount
+</pre></div>
+
+
+<p>It already feels like a pretty normal directory. Most of it&rsquo;s code is inspired
+from bolt-mount, which is described in this
+<a href="http://eagain.net/talks/bolt-mount/">video</a>.
+As you may have noticed <code>mount</code> and <code>mount -u</code> are daemon commands already.
+The only thing left to do now, is to read the actual stream and display
+<code>store.Trie</code>.</p>
+
+<p>There was another small change which might have larger impact. Instead of generating
+the AES-key from the hash of the first 8KB of a file, the key is randomly generated now
+and stored in the index. This is probably saner/faster/more secure. But the actual
+reason for this is: When modifying the file, the key might need to change, which
+required re-encrypting the file, which in turn is very expensive.
+For the prototype we probably need to re-add every file to <code>ipfs</code> anyways, but now
+we have more space for optimisations later on.</p>
+
+<p>Another nicety is that <code>brig add</code> now works on directories. It simply adds all
+files in it and <code>brig mkdir</code> all directories. Also missing <code>/</code> are prefixed
+automatically and the repo path can be guessed from the source path.</p>
+
+<p>As usual, a list of targets for the next entry follows (this evolves into my TODO-list&hellip;):</p>
+
+<ul>
+<li>Add <code>brig rm</code> which does obvious things.</li>
+<li>Make sure trie modifications in the index are locked.</li>
+<li>Read relevant metadata from the source file (size, mtime, etc.)</li>
+<li>Fix my sleep schedule.</li>
+</ul>
+
+  </section>
+</article>
+
+</main>
+
+
+</div>
+
+<footer>
+  <div class="container">
+    <span class="copyright">&copy; 2016  brig devlog - <a rel="license" href="http://creativecommons.org/licenses/by/4.0/">CC BY 4.0</a></span>
+  </div>
+</footer>
+
+</body>
+</html>
+
