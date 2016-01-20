@@ -1,5 +1,5 @@
 ---
-date: "2016-01-16T18:44:51+01:00"
+date: "2016-01-19T18:44:51+01:00"
 title: "Fusing it together"
 tags:   [ "Development", "Go", "brig"]
 topics: [ "Development", "Go" ]
