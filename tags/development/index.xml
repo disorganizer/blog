@@ -10,6 +10,69 @@
     <atom:link href="https://disorganizer.github.io/blog/tags/development/index.xml" rel="self" type="application/rss+xml" />
     
     <item>
+      <title>Fusing it together</title>
+      <link>https://disorganizer.github.io/blog/post/fuse_it_together/</link>
+      <pubDate>Sat, 16 Jan 2016 18:44:51 +0100</pubDate>
+      
+      <guid>https://disorganizer.github.io/blog/post/fuse_it_together/</guid>
+      <description>&lt;p&gt;Another productive day, another update late in the night.&lt;/p&gt;
+
+&lt;p&gt;A basic FUSE layer is integrated and is already able to display
+the contents of a &lt;code&gt;util.trie.Trie&lt;/code&gt; as files and directories.
+Reading and writing is not yet implemented, since that&amp;rsquo;s the
+part where fuse and brig actually need to&amp;hellip; fuse.&lt;/p&gt;
+
+&lt;p&gt;Here&amp;rsquo;s a small session inside the fuse layer:&lt;/p&gt;
+
+&lt;div class=&#34;highlight&#34; style=&#34;background: #272822&#34;&gt;&lt;pre style=&#34;line-height: 125%&#34;&gt;λ ~ → brig mount /tmp/mount &lt;span style=&#34;color: #f92672&#34;&gt;&amp;amp;&amp;amp;&lt;/span&gt; &lt;span style=&#34;color: #f8f8f2&#34;&gt;cd&lt;/span&gt; /tmp/mount
+λ /tmp/mount → touch hello  &lt;span style=&#34;color: #75715e&#34;&gt;# Creating file work. &lt;/span&gt;
+λ /tmp/mount → cat hello    &lt;span style=&#34;color: #75715e&#34;&gt;# Although they contain weird stuff.&lt;/span&gt;
+NaNaNaNaNaNaNaNaNaNaNaNaNaNaNaNaNaNaNaNaNaNaNaNaNaNaNaNaNa
+NaNaNaNaNaNaNaNaNaNaNaNaNaNaNaNaNaNaNaNaNaNaNaNaNaNaNaNaNa
+NaNaNaNaNaNaNaNaNaNaNaNaNaNaNaNaNaNaNaNaNaNaNaNaNaNaNaNaNa
+NaNaNaNaNaNaNaNaNaNaNaNaNa%
+λ /tmp/mount → stat hello   &lt;span style=&#34;color: #75715e&#34;&gt;# Every file is 200 bytes in size currently.&lt;/span&gt;
+File: „hello“
+&lt;span style=&#34;color: #f92672&#34;&gt;(&lt;/span&gt;...&lt;span style=&#34;color: #f92672&#34;&gt;)&lt;/span&gt; Size: &lt;span style=&#34;color: #ae81ff&#34;&gt;200&lt;/span&gt;  &lt;span style=&#34;color: #f92672&#34;&gt;(&lt;/span&gt;...&lt;span style=&#34;color: #f92672&#34;&gt;)&lt;/span&gt;
+λ /tmp/mount → ls           &lt;span style=&#34;color: #75715e&#34;&gt;# Also enumerating the directory.&lt;/span&gt;
+hello  &lt;span style=&#34;color: #f8f8f2&#34;&gt;test&lt;/span&gt;
+λ /tmp/mount → mkdir new    &lt;span style=&#34;color: #75715e&#34;&gt;# Adding directories even somehow works.&lt;/span&gt;
+hello  new  &lt;span style=&#34;color: #f8f8f2&#34;&gt;test&lt;/span&gt;
+$ brig mount -u /tmp/mount
+&lt;/pre&gt;&lt;/div&gt;
+
+
+&lt;p&gt;It already feels like a pretty normal directory. Most of it&amp;rsquo;s code is inspired
+from bolt-mount, which is described in this
+&lt;a href=&#34;http://eagain.net/talks/bolt-mount/&#34;&gt;video&lt;/a&gt;.
+As you may have noticed &lt;code&gt;mount&lt;/code&gt; and &lt;code&gt;mount -u&lt;/code&gt; are daemon commands already.
+The only thing left to do now, is to read the actual stream and display
+&lt;code&gt;store.Trie&lt;/code&gt;.&lt;/p&gt;
+
+&lt;p&gt;There was another small change which might have larger impact. Instead of generating
+the AES-key from the hash of the first 8KB of a file, the key is randomly generated now
+and stored in the index. This is probably saner/faster/more secure. But the actual
+reason for this is: When modifying the file, the key might need to change, which
+required re-encrypting the file, which in turn is very expensive.
+For the prototype we probably need to re-add every file to &lt;code&gt;ipfs&lt;/code&gt; anyways, but now
+we have more space for optimisations later on.&lt;/p&gt;
+
+&lt;p&gt;Another nicety is that &lt;code&gt;brig add&lt;/code&gt; now works on directories. It simply adds all
+files in it and &lt;code&gt;brig mkdir&lt;/code&gt; all directories. Also missing &lt;code&gt;/&lt;/code&gt; are prefixed
+automatically and the repo path can be guessed from the source path.&lt;/p&gt;
+
+&lt;p&gt;As usual, a list of targets for the next entry follows (this evolves into my TODO-list&amp;hellip;):&lt;/p&gt;
+
+&lt;ul&gt;
+&lt;li&gt;Add &lt;code&gt;brig rm&lt;/code&gt; which does obvious things.&lt;/li&gt;
+&lt;li&gt;Make sure trie modifications in the index are locked.&lt;/li&gt;
+&lt;li&gt;Read relevant metadata from the source file (size, mtime, etc.)&lt;/li&gt;
+&lt;li&gt;Fix my sleep schedule.&lt;/li&gt;
+&lt;/ul&gt;
+</description>
+    </item>
+    
+    <item>
       <title>Stacking closures and more</title>
       <link>https://disorganizer.github.io/blog/post/bolt_and_fingerprint/</link>
       <pubDate>Sat, 16 Jan 2016 18:44:51 +0100</pubDate>
