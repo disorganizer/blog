@@ -6,8 +6,91 @@
     <description>Recent content in Go on brig devlog</description>
     <generator>Hugo -- gohugo.io</generator>
     <language>en-us</language>
-    <lastBuildDate>Tue, 19 Jan 2016 18:44:51 +0100</lastBuildDate>
+    <lastBuildDate>Mon, 01 Feb 2016 00:03:36 +0100</lastBuildDate>
     <atom:link href="https://disorganizer.github.io/blog/tags/go/index.xml" rel="self" type="application/rss+xml" />
+    
+    <item>
+      <title>The write layer</title>
+      <link>https://disorganizer.github.io/blog/post/the_write_layer/</link>
+      <pubDate>Mon, 01 Feb 2016 00:03:36 +0100</pubDate>
+      
+      <guid>https://disorganizer.github.io/blog/post/the_write_layer/</guid>
+      <description>&lt;p&gt;A bit more than a week since the last post, I&amp;rsquo;m getting worse again. Screw it.
+Besides a lot of personal life stuff a major &amp;ldquo;problem&amp;rdquo; was solved: Writing to
+files. Doesn&amp;rsquo;t sound like an impressive problem, I know.&lt;/p&gt;
+
+&lt;p&gt;But how is &lt;code&gt;brig&lt;/code&gt; able to modify existing files by writing somewhere in them,
+extending them or truncating them to some size? With the cli interface it&amp;rsquo;s not
+much of a problem, a simple &lt;code&gt;brig add&lt;/code&gt; updates the file:&lt;/p&gt;
+
+&lt;div class=&#34;highlight&#34; style=&#34;background: #272822&#34;&gt;&lt;pre style=&#34;line-height: 125%&#34;&gt;$ &lt;span style=&#34;color: #f8f8f2&#34;&gt;echo&lt;/span&gt; &lt;span style=&#34;color: #e6db74&#34;&gt;&amp;#39;What now?&amp;#39;&lt;/span&gt; &amp;gt; file.txt 
+$ brig add file.txt &lt;span style=&#34;color: #f92672&#34;&gt;&amp;amp;&amp;amp;&lt;/span&gt; brig cat file.txt
+What now?
+$ &lt;span style=&#34;color: #f8f8f2&#34;&gt;echo&lt;/span&gt; &lt;span style=&#34;color: #e6db74&#34;&gt;&amp;#39; PARTY!&amp;#39;&lt;/span&gt; &amp;gt;&amp;gt; file.txt
+$ brig add file.txt &lt;span style=&#34;color: #f92672&#34;&gt;&amp;amp;&amp;amp;&lt;/span&gt; brig cat file.txt
+What now? PARTY!
+&lt;/pre&gt;&lt;/div&gt;
+
+
+&lt;p&gt;The file is simply hashed and encrypted as a whole and is added to &lt;code&gt;ipfs&lt;/code&gt;.
+A new entry in the version history will be created and the next &lt;code&gt;cat&lt;/code&gt;
+gives the newer version.  But what about editing large files in the fuse layer?
+Do we need to add the whole file on every edit over and over again?
+That would be hella inefficient.&lt;/p&gt;
+
+&lt;p&gt;The solution is kinda obvious, but the devil is in the details.
+Every file handle that is opened from the outside via the fuse layer
+internally opens a seekable read-only stream to the actual data in ipfs.
+The decryption and retrieving from &lt;code&gt;ipfs&lt;/code&gt; is transparently managed, so
+to the caller side it simply looks like a stream of the originally added file.
+When a user writes data to the file, the data will be cached in memory a layer
+over the original file. Once the file handle is closed, the written data will
+be layered over the original read-only stream and added to &lt;code&gt;ipfs&lt;/code&gt;.
+Since images are easier to grasp than text, here&amp;rsquo;s an example overlay:&lt;/p&gt;
+
+&lt;p&gt;&lt;img src=&#34;https://disorganizer.github.io/blog/img/write_overlay.svg&#34; alt=&#34;Overlay&#34; width=&#34;800px&#34;/&gt;&lt;/p&gt;
+
+&lt;p&gt;That&amp;rsquo;s the current solution and it&amp;rsquo;s already a lot better than just re-adding
+the file over and over. However, on every close the whole file is added anyways,
+which makes editing large files inefficient. This might be helped in the future
+by rolling hashes and direct writing to the blocks in &lt;code&gt;ipfs&lt;/code&gt;.
+Another drawback is that every write is cached in memory, which can obviously
+suck up your RAM in minutes. A viable solution would be to implement a &amp;ldquo;scratchpad&amp;rdquo;
+on disk where encrypted chunks of data will be stored until the handle closes.&lt;/p&gt;
+
+&lt;p&gt;As mentioned, the actual details are hairy. Implementing seekable decryption,
+overlaying &lt;code&gt;io.Writers&lt;/code&gt; and similar stuff is a really great source for one-off
+errors and other exotic bugs that are hard to find. To be more exact: there are
+know bugs: Truncating to zero and then appending to the end (like &lt;code&gt;echo xyz &amp;gt;&amp;gt;
+file.txt&lt;/code&gt;) produces every content in the file before the append is zeroed.&lt;/p&gt;
+
+&lt;p&gt;Speaking of bugs, there are plenty of todos until the next blog entry:&lt;/p&gt;
+
+&lt;ul&gt;
+&lt;li&gt;&lt;strong&gt;Make creating files in fuse possible:&lt;/strong&gt; This does not work currently for
+unknown reasons.&lt;/li&gt;
+&lt;li&gt;&lt;strong&gt;Actually add old files to commit history:&lt;/strong&gt; Old hashes are silently discarded
+and not unpinned. This will lead to lot of undeleteable garbage files.&lt;/li&gt;
+&lt;li&gt;The encryption format needs a field to &lt;strong&gt;remember compression and a MAC&lt;/strong&gt; to
+protect against forgery of the header data.&lt;/li&gt;
+&lt;li&gt;&lt;strong&gt;General code cleanup:&lt;/strong&gt; This involves running linters, removing debug messages
+and cleaning up old hacks.&lt;/li&gt;
+&lt;li&gt;There are no &lt;strong&gt;tests&lt;/strong&gt; for the fuse layer, but some bash scripts. These need
+to be converted to go.&lt;/li&gt;
+&lt;/ul&gt;
+
+&lt;p&gt;&lt;strong&gt;Long term goals:&lt;/strong&gt;&lt;/p&gt;
+
+&lt;p&gt;Before diving much deeper in the frontend part of &lt;code&gt;brig&lt;/code&gt; (&lt;code&gt;fuse&lt;/code&gt;, cli, etc.)
+it&amp;rsquo;s probably a good idea to get on the &lt;code&gt;xmpp/bolt&lt;/code&gt; side and see if we can
+persuade &lt;code&gt;brig&lt;/code&gt; to sync files over the net. Steep goals, but you can already
+get the raw from &lt;code&gt;ipfs&lt;/code&gt; from another computer!&lt;/p&gt;
+
+&lt;p&gt;The next blog post will give therefore an overview of the current architecture
+and how the source is layout. Writing about that always help figuring out what
+parts I screwed up. 😃&lt;/p&gt;
+</description>
+    </item>
     
     <item>
       <title>Fusing it together</title>
