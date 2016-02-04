@@ -23,7 +23,7 @@ files. Doesn&amp;rsquo;t sound like an impressive problem, I know.&lt;/p&gt;
 extending them or truncating them to some size? With the cli interface it&amp;rsquo;s not
 much of a problem, a simple &lt;code&gt;brig add&lt;/code&gt; updates the file:&lt;/p&gt;
 
-&lt;div class=&#34;highlight&#34; style=&#34;background: #272822&#34;&gt;&lt;pre style=&#34;line-height: 125%&#34;&gt;$ &lt;span style=&#34;color: #f8f8f2&#34;&gt;echo&lt;/span&gt; &lt;span style=&#34;color: #e6db74&#34;&gt;&amp;#39;What now?&amp;#39;&lt;/span&gt; &amp;gt; file.txt 
+&lt;div class=&#34;highlight&#34; style=&#34;background: #272822&#34;&gt;&lt;pre style=&#34;line-height: 125%&#34;&gt;$ &lt;span style=&#34;color: #f8f8f2&#34;&gt;echo&lt;/span&gt; -n &lt;span style=&#34;color: #e6db74&#34;&gt;&amp;#39;What now?&amp;#39;&lt;/span&gt; &amp;gt; file.txt 
 $ brig add file.txt &lt;span style=&#34;color: #f92672&#34;&gt;&amp;amp;&amp;amp;&lt;/span&gt; brig cat file.txt
 What now?
 $ &lt;span style=&#34;color: #f8f8f2&#34;&gt;echo&lt;/span&gt; &lt;span style=&#34;color: #e6db74&#34;&gt;&amp;#39; PARTY!&amp;#39;&lt;/span&gt; &amp;gt;&amp;gt; file.txt
@@ -61,8 +61,9 @@ on disk where encrypted chunks of data will be stored until the handle closes.&l
 &lt;p&gt;As mentioned, the actual details are hairy. Implementing seekable decryption,
 overlaying &lt;code&gt;io.Writers&lt;/code&gt; and similar stuff is a really great source for one-off
 errors and other exotic bugs that are hard to find. To be more exact: there are
-know bugs: Truncating to zero and then appending to the end (like &lt;code&gt;echo xyz &amp;gt;&amp;gt;
-file.txt&lt;/code&gt;) produces every content in the file before the append is zeroed.&lt;/p&gt;
+known bugs: Truncating to zero and then appending to the end (like &lt;code&gt;echo xyz &amp;gt;&amp;gt;
+file.txt&lt;/code&gt;) produces a file with content zeroed everything before the appended
+data.&lt;/p&gt;
 
 &lt;p&gt;Speaking of bugs, there are plenty of todos until the next blog entry:&lt;/p&gt;
 

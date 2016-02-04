@@ -14,7 +14,7 @@ extending them or truncating them to some size? With the cli interface it's not
 much of a problem, a simple ``brig add`` updates the file:
 
 {{< highlight bash>}}
-$ echo 'What now?' > file.txt 
+$ echo -n 'What now?' > file.txt 
 $ brig add file.txt && brig cat file.txt
 What now?
 $ echo ' PARTY!' >> file.txt
@@ -51,8 +51,9 @@ on disk where encrypted chunks of data will be stored until the handle closes.
 As mentioned, the actual details are hairy. Implementing seekable decryption,
 overlaying ``io.Writers`` and similar stuff is a really great source for one-off
 errors and other exotic bugs that are hard to find. To be more exact: there are
-know bugs: Truncating to zero and then appending to the end (like ``echo xyz >>
-file.txt``) produces every content in the file before the append is zeroed.
+known bugs: Truncating to zero and then appending to the end (like ``echo xyz >>
+file.txt``) produces a file with content zeroed everything before the appended
+data.
 
 Speaking of bugs, there are plenty of todos until the next blog entry:
 
