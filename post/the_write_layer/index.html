@@ -57,7 +57,7 @@ files. Doesn&rsquo;t sound like an impressive problem, I know.</p>
 extending them or truncating them to some size? With the cli interface it&rsquo;s not
 much of a problem, a simple <code>brig add</code> updates the file:</p>
 
-<div class="highlight" style="background: #272822"><pre style="line-height: 125%">$ <span style="color: #f8f8f2">echo</span> <span style="color: #e6db74">&#39;What now?&#39;</span> &gt; file.txt 
+<div class="highlight" style="background: #272822"><pre style="line-height: 125%">$ <span style="color: #f8f8f2">echo</span> -n <span style="color: #e6db74">&#39;What now?&#39;</span> &gt; file.txt 
 $ brig add file.txt <span style="color: #f92672">&amp;&amp;</span> brig cat file.txt
 What now?
 $ <span style="color: #f8f8f2">echo</span> <span style="color: #e6db74">&#39; PARTY!&#39;</span> &gt;&gt; file.txt
@@ -95,8 +95,9 @@ on disk where encrypted chunks of data will be stored until the handle closes.</
 <p>As mentioned, the actual details are hairy. Implementing seekable decryption,
 overlaying <code>io.Writers</code> and similar stuff is a really great source for one-off
 errors and other exotic bugs that are hard to find. To be more exact: there are
-know bugs: Truncating to zero and then appending to the end (like <code>echo xyz &gt;&gt;
-file.txt</code>) produces every content in the file before the append is zeroed.</p>
+known bugs: Truncating to zero and then appending to the end (like <code>echo xyz &gt;&gt;
+file.txt</code>) produces a file with content zeroed everything before the appended
+data.</p>
 
 <p>Speaking of bugs, there are plenty of todos until the next blog entry:</p>
 
