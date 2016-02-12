@@ -6,8 +6,107 @@
     <description>Recent content on brig devlog</description>
     <generator>Hugo -- gohugo.io</generator>
     <language>en-us</language>
-    <lastBuildDate>Mon, 01 Feb 2016 00:03:36 +0100</lastBuildDate>
+    <lastBuildDate>Thu, 11 Feb 2016 19:26:59 +0100</lastBuildDate>
     <atom:link href="https://disorganizer.github.io/blog/index.xml" rel="self" type="application/rss+xml" />
+    
+    <item>
+      <title>Source Layout</title>
+      <link>https://disorganizer.github.io/blog/post/source_layout/</link>
+      <pubDate>Thu, 11 Feb 2016 19:26:59 +0100</pubDate>
+      
+      <guid>https://disorganizer.github.io/blog/post/source_layout/</guid>
+      <description>&lt;p&gt;Hi there. Today&amp;rsquo;s blog post is a unsorted notepad of how &lt;code&gt;brig&lt;/code&gt;&amp;rsquo;s source is
+currently layout and what the big picture behind is supposed to look like.&lt;/p&gt;
+
+&lt;p&gt;Now that &lt;code&gt;brig&lt;/code&gt; is already a mid-sized codebase (when did we get to 7k lines
+of code?), it might be worthwhile to show what packages we have and how they
+interact. Here&amp;rsquo;s the &lt;code&gt;tree(1)&lt;/code&gt; output of the git repository at the time of
+writing. I allowed myself to reduce it to the most relevant files, also skipping
+tests and rather unimportant subdirectories:&lt;/p&gt;
+
+&lt;div class=&#34;highlight&#34; style=&#34;background: #272822&#34;&gt;&lt;pre style=&#34;line-height: 125%&#34;&gt;$ tree &lt;span style=&#34;color: #f8f8f2&#34;&gt;|&lt;/span&gt; grep -v &lt;span style=&#34;color: #e6db74&#34;&gt;&amp;#39;unimportant&amp;#39;&lt;/span&gt; .
+├── doc.go            &lt;span style=&#34;color: #75715e&#34;&gt;# Top-level documentation.&lt;/span&gt;
+├── Makefile          &lt;span style=&#34;color: #75715e&#34;&gt;# Makefile with often used tools.&lt;/span&gt;
+├── brig              &lt;span style=&#34;color: #75715e&#34;&gt;# Source of the `brig` binary...&lt;/span&gt;
+│   └── brig.go       &lt;span style=&#34;color: #75715e&#34;&gt;# ...which just calls into cmdline.*&lt;/span&gt;
+├── cmdline           &lt;span style=&#34;color: #75715e&#34;&gt;# Actual implementation of the cli.&lt;/span&gt;
+│   ├── handlers.go   &lt;span style=&#34;color: #75715e&#34;&gt;# Handler function for each subcommand.&lt;/span&gt;
+│   └── parser.go     &lt;span style=&#34;color: #75715e&#34;&gt;# Subcommand definitions are in here.&lt;/span&gt;
+├── daemon            &lt;span style=&#34;color: #75715e&#34;&gt;# Implement the daemon/client process and io.&lt;/span&gt;
+│   ├── client.go     &lt;span style=&#34;color: #75715e&#34;&gt;# client side daemon io.&lt;/span&gt;
+│   ├── server.go     &lt;span style=&#34;color: #75715e&#34;&gt;# Server side daemon io.&lt;/span&gt;
+│   ├── handlers.go   &lt;span style=&#34;color: #75715e&#34;&gt;# Server handler for each daemon command.&lt;/span&gt;
+│   └── operations.go &lt;span style=&#34;color: #75715e&#34;&gt;# Client handler for each daemon command.&lt;/span&gt;
+├── fuse              &lt;span style=&#34;color: #75715e&#34;&gt;# Implementation of `brigfs`&lt;/span&gt;
+│   ├── directory.go  &lt;span style=&#34;color: #75715e&#34;&gt;# Logic for directory nodes.&lt;/span&gt;
+│   ├── entry.go      &lt;span style=&#34;color: #75715e&#34;&gt;# Logic for regular files.&lt;/span&gt;
+│   ├── handle.go     &lt;span style=&#34;color: #75715e&#34;&gt;# Logic for open()&amp;#39;d nodes.&lt;/span&gt;
+│   ├── fs.go         &lt;span style=&#34;color: #75715e&#34;&gt;# Filesystem entry; defines the root node.&lt;/span&gt;
+│   └── mount.go      &lt;span style=&#34;color: #75715e&#34;&gt;# Mount utility.&lt;/span&gt;
+├── im                &lt;span style=&#34;color: #75715e&#34;&gt;# XMPP communication layer.&lt;/span&gt;
+│   ├── client.go     &lt;span style=&#34;color: #75715e&#34;&gt;# A generic otr-enabled xmpp client.&lt;/span&gt;
+│   ├── finger.go     &lt;span style=&#34;color: #75715e&#34;&gt;# Fingerprint and key storage of each user.&lt;/span&gt;
+├── repo              &lt;span style=&#34;color: #75715e&#34;&gt;# Code for filesystem repository handling.&lt;/span&gt;
+│   ├── config/       &lt;span style=&#34;color: #75715e&#34;&gt;# Config value retrieval and default config.&lt;/span&gt;
+│   ├── global/       &lt;span style=&#34;color: #75715e&#34;&gt;# Global config handling (~/.brig/)&lt;/span&gt;
+│   ├── id.go         &lt;span style=&#34;color: #75715e&#34;&gt;# File locking (TODO: move to open.go?)&lt;/span&gt;
+│   ├── init.go       &lt;span style=&#34;color: #75715e&#34;&gt;# Code to initialize a new empty repo.&lt;/span&gt;
+│   ├── locate.go     &lt;span style=&#34;color: #75715e&#34;&gt;# Tool to find the repo root path.&lt;/span&gt;
+│   ├── open.go       &lt;span style=&#34;color: #75715e&#34;&gt;# Code to lock/unlock a repository.&lt;/span&gt;
+│   ├── pwd.go        &lt;span style=&#34;color: #75715e&#34;&gt;# Password handling.&lt;/span&gt;
+│   └── repo.go       &lt;span style=&#34;color: #75715e&#34;&gt;# The repository structure itself.&lt;/span&gt;
+├── store             &lt;span style=&#34;color: #75715e&#34;&gt;# The actual core: file structs and ipfs handling.&lt;/span&gt;
+│   ├── compress/     &lt;span style=&#34;color: #75715e&#34;&gt;# Seekable compression IO Layer using snappy.&lt;/span&gt;
+│   ├── encrypt/      &lt;span style=&#34;color: #75715e&#34;&gt;# Seekable encryption IO Layer.&lt;/span&gt;
+│   ├── format-util/  &lt;span style=&#34;color: #75715e&#34;&gt;# Compress&amp;amp;Encryption util for brigs file format.&lt;/span&gt;
+│   ├── commit.go     &lt;span style=&#34;color: #75715e&#34;&gt;# Versioning handling.&lt;/span&gt;
+│   ├── file.go       &lt;span style=&#34;color: #75715e&#34;&gt;# Implement the file struct and the implicit trie.&lt;/span&gt;
+│   ├── hash.go       &lt;span style=&#34;color: #75715e&#34;&gt;# wrapper around jbenet/multihash&amp;#39;s implementation.&lt;/span&gt;
+│   ├── index.go      &lt;span style=&#34;color: #75715e&#34;&gt;# Implementation of add/rm/cat/checkout...&lt;/span&gt;
+│   ├── overlay.go    &lt;span style=&#34;color: #75715e&#34;&gt;# A write overlay of a immutable io.Reader for fuse.&lt;/span&gt;
+│   ├── stream.go     &lt;span style=&#34;color: #75715e&#34;&gt;# Stack encryption and compression.&lt;/span&gt;
+├── util              &lt;span style=&#34;color: #75715e&#34;&gt;# General utilities.&lt;/span&gt;
+│   ├── colors/       &lt;span style=&#34;color: #75715e&#34;&gt;# ASCII-terminal color code colorizing.&lt;/span&gt;
+│   ├── filelock/     &lt;span style=&#34;color: #75715e&#34;&gt;# Filelocking (used for the global repo)&lt;/span&gt;
+│   ├── ipfsutil/     &lt;span style=&#34;color: #75715e&#34;&gt;# Utils around the ipfs libraries.&lt;/span&gt;
+│   ├── log/          &lt;span style=&#34;color: #75715e&#34;&gt;# A colorful log-formatter for `logrus`&lt;/span&gt;
+│   ├── security/     &lt;span style=&#34;color: #75715e&#34;&gt;# security related utilites (scrypt simplified)&lt;/span&gt;
+│   ├── testutil/     &lt;span style=&#34;color: #75715e&#34;&gt;# Utils used in various tests.&lt;/span&gt;
+│   ├── trie/         &lt;span style=&#34;color: #75715e&#34;&gt;# A re-usable radix-trie for absolute file paths.&lt;/span&gt;
+│   ├── tunnel/       &lt;span style=&#34;color: #75715e&#34;&gt;# An io.ReadWriter that pipes through ECDH and AES.&lt;/span&gt;
+│   └── std.go        &lt;span style=&#34;color: #75715e&#34;&gt;# Standard utils that should be in the standard lib.&lt;/span&gt;
+└── version.go        &lt;span style=&#34;color: #75715e&#34;&gt;# Semantic versioning of the brig util/library.&lt;/span&gt;
+&lt;/pre&gt;&lt;/div&gt;
+
+
+&lt;p&gt;You might already have an idea how &lt;code&gt;brig&lt;/code&gt; is working by now. There&amp;rsquo;s a
+command-line utility that speaks to a daemon that was somehow started, which
+uses a store to &lt;code&gt;add&lt;/code&gt; and &lt;code&gt;cat&lt;/code&gt; files. The daemon is also capable of mounting
+a fuse filesystem, but before that it needs a repository to run in.
+That&amp;rsquo;s the very rough picture, but to recap this we have this diagram to show
+how the most important packages play together:&lt;/p&gt;
+
+&lt;p&gt;&lt;img src=&#34;https://disorganizer.github.io/blog/img/package_map.svg&#34; alt=&#34;Package map&#34; width=&#34;800px&#34;/&gt;&lt;/p&gt;
+
+&lt;p&gt;From a slightly wider view, the communication between two repositories
+is supposed too look like this:&lt;/p&gt;
+
+&lt;p&gt;&lt;img src=&#34;https://disorganizer.github.io/blog/img/brig_arch.svg&#34; alt=&#34;Security architecture&#34; width=&#34;800px&#34;/&gt;&lt;/p&gt;
+
+&lt;p&gt;I don&amp;rsquo;t have any details to show here, simply because there is nothing to show
+yet: The inter-repository communication simply does not exist yet. 😉&lt;/p&gt;
+
+&lt;p&gt;What&amp;rsquo;s working now is mostly the fuse part (well, mostly, it already works like
+a buggy and slow &lt;code&gt;encfs&lt;/code&gt;) and the versioning. Naturally the next goal is
+to exchange some information between two &lt;code&gt;brig&lt;/code&gt; nodes.
+The cool thing about the current architecture is naturally that we don&amp;rsquo;t need to
+do any file exchange or storage ourselves, since &lt;code&gt;ipfs&lt;/code&gt; handles that for us.
+As long as we manage to get the hashes and keys across XMPP, we successfully
+share files - &lt;code&gt;ipfs&lt;/code&gt; will make sure to load it from the swarm.&lt;/p&gt;
+
+&lt;p&gt;It&amp;rsquo;s late here, so that&amp;rsquo;s it for today.&lt;/p&gt;
+</description>
+    </item>
     
     <item>
       <title>The write layer</title>
