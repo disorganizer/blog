@@ -5,7 +5,7 @@
 <meta name="description" content="">
 <meta name="keywords" content="">
 <meta name="author" content="">
-<meta name="generator" content="Hugo 0.16-DEV" />
+<meta name="generator" content="Hugo 0.14" />
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <link rel="stylesheet" href="https://disorganizer.github.io/blog/css/style.css" type="text/css">
 <link rel="stylesheet" href="https://fonts.googleapis.com/css?family=Source+Code+Pro:400,700" type="text/css">
@@ -57,14 +57,14 @@ files. Doesn&rsquo;t sound like an impressive problem, I know.</p>
 extending them or truncating them to some size? With the cli interface it&rsquo;s not
 much of a problem, a simple <code>brig add</code> updates the file:</p>
 
-<div class="highlight" style="background: #272822"><pre style="line-height: 125%">$ <span style="color: #f8f8f2">echo</span> -n <span style="color: #e6db74">&#39;What now?&#39;</span> &gt; file.txt 
-$ brig add file.txt <span style="color: #f92672">&amp;&amp;</span> brig cat file.txt
+<p><div class="highlight" style="background: #272822"><pre style="line-height: 125%"><span style="color: #f8f8f2">$ echo</span> -n <span style="color: #e6db74">&#39;What now?&#39;</span> &gt; file.txt 
+<span style="color: #f8f8f2">$ </span>brig add file.txt <span style="color: #f92672">&amp;&amp;</span> brig cat file.txt
 What now?
-$ <span style="color: #f8f8f2">echo</span> <span style="color: #e6db74">&#39; PARTY!&#39;</span> &gt;&gt; file.txt
-$ brig add file.txt <span style="color: #f92672">&amp;&amp;</span> brig cat file.txt
+<span style="color: #f8f8f2">$ echo</span> <span style="color: #e6db74">&#39; PARTY!&#39;</span> &gt;&gt; file.txt
+<span style="color: #f8f8f2">$ </span>brig add file.txt <span style="color: #f92672">&amp;&amp;</span> brig cat file.txt
 What now? PARTY!
 </pre></div>
-
+</p>
 
 <p>The file is simply hashed and encrypted as a whole and is added to <code>ipfs</code>.
 A new entry in the version history will be created and the next <code>cat</code>

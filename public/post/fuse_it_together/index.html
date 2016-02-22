@@ -5,7 +5,7 @@
 <meta name="description" content="">
 <meta name="keywords" content="">
 <meta name="author" content="">
-<meta name="generator" content="Hugo 0.16-DEV" />
+<meta name="generator" content="Hugo 0.14" />
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <link rel="stylesheet" href="https://disorganizer.github.io/blog/css/style.css" type="text/css">
 <link rel="stylesheet" href="https://fonts.googleapis.com/css?family=Source+Code+Pro:400,700" type="text/css">
@@ -58,7 +58,7 @@ part where fuse and brig actually need to&hellip; fuse.</p>
 
 <p>Here&rsquo;s a small session inside the fuse layer:</p>
 
-<div class="highlight" style="background: #272822"><pre style="line-height: 125%">λ ~ → brig mount /tmp/mount <span style="color: #f92672">&amp;&amp;</span> <span style="color: #f8f8f2">cd</span> /tmp/mount
+<p><div class="highlight" style="background: #272822"><pre style="line-height: 125%">λ ~ → brig mount /tmp/mount <span style="color: #f92672">&amp;&amp;</span> <span style="color: #f8f8f2">cd</span> /tmp/mount
 λ /tmp/mount → touch hello  <span style="color: #75715e"># Creating file work. </span>
 λ /tmp/mount → cat hello    <span style="color: #75715e"># Although they contain weird stuff.</span>
 NaNaNaNaNaNaNaNaNaNaNaNaNaNaNaNaNaNaNaNaNaNaNaNaNaNaNaNaNa
@@ -67,14 +67,14 @@ NaNaNaNaNaNaNaNaNaNaNaNaNaNaNaNaNaNaNaNaNaNaNaNaNaNaNaNaNa
 NaNaNaNaNaNaNaNaNaNaNaNaNa%
 λ /tmp/mount → stat hello   <span style="color: #75715e"># Every file is 200 bytes in size currently.</span>
 File: „hello“
-<span style="color: #f92672">(</span>...<span style="color: #f92672">)</span> Size: <span style="color: #ae81ff">200</span>  <span style="color: #f92672">(</span>...<span style="color: #f92672">)</span>
+<span style="color: #f92672">(</span>...<span style="color: #f92672">)</span> Size: 200  <span style="color: #f92672">(</span>...<span style="color: #f92672">)</span>
 λ /tmp/mount → ls           <span style="color: #75715e"># Also enumerating the directory.</span>
 hello  <span style="color: #f8f8f2">test</span>
 λ /tmp/mount → mkdir new    <span style="color: #75715e"># Adding directories even somehow works.</span>
 hello  new  <span style="color: #f8f8f2">test</span>
-$ brig mount -u /tmp/mount
+<span style="color: #f8f8f2">$ </span>brig mount -u /tmp/mount
 </pre></div>
-
+</p>
 
 <p>It already feels like a pretty normal directory. Most of it&rsquo;s code is inspired
 from bolt-mount, which is described in this

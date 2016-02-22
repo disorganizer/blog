@@ -1,0 +1,497 @@
+<!DOCTYPE html>
+<html lang="en-us">
+<head>
+<meta charset="utf-8">
+<meta name="description" content="">
+<meta name="keywords" content="">
+<meta name="author" content="">
+<meta name="generator" content="Hugo 0.14" />
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<link rel="stylesheet" href="https://disorganizer.github.io/blog/css/style.css" type="text/css">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css?family=Source+Code+Pro:400,700" type="text/css">
+<link rel="alternate" href="https://disorganizer.github.io/blog/index.xml" type="application/rss+xml" title="brig devlog">
+<title>The semantics of io - brig devlog</title>
+</head>
+<body>
+
+<header>
+  <div class="container">
+    <a class="path" href="https://disorganizer.github.io/blog">[brig devlog]</a>
+    <span class="caret"># _</span>
+  </div>
+</header>
+
+<div class="container">
+
+
+<main role="main" class="article">
+  
+<article class="single" itemscope itemtype="http://schema.org/BlogPosting">
+  <div class="meta">
+
+    <span class="key">published on</span>
+    <span class="val"><time itemprop="datePublished" datetime="2016-02-22">February 22, 2016</time></span>
+
+
+
+    <br>
+    <span class="key">tags:</span>
+    <span class="val">
+
+        <a href="https://disorganizer.github.io/blogtags/development">Development</a>
+
+        <a href="https://disorganizer.github.io/blogtags/go">Go</a>
+
+        <a href="https://disorganizer.github.io/blogtags/brig">brig</a>
+
+    </span>
+
+  </div>
+  <h1 class="headline" itemprop="headline">The semantics of io</h1>
+  <section class="body" itemprop="articleBody">
+    
+
+<p>When using Go, you can&rsquo;t get far without using one of <code>io.Reader</code> or
+<code>io.Writer</code>. If you tinkered a bit more with the language it&rsquo;s also almost
+certain that you wrote a <code>io.{Reader,Writer}</code> yourself. In fact, <code>brig</code>
+currently implements 9 <code>io.Writer</code> and 7 <code>io.Reader</code>, 4 of them with
+additional support for <code>io.Seeker</code>. Some of them closable, some not. Some of
+them wrapping other writers, some not. It&rsquo;s a great concept, since they&rsquo;re very
+re-usable and allow a program to operate on arbitrary streams of data, without
+being bound on where the data actually comes from. It might come from
+the network, a file or <code>stdin</code>.</p>
+
+<p>While writing those, I noticed that there are implied rules which might not be
+obvious from reading the <a href="https://golang.org/pkg/io/">io documentation</a> and some
+other things that just make sense in the majority of implementations. Therefore
+this article tries to collect some of those <em>best practices</em> (if there is such a
+thing).</p>
+
+<p>We assume you already have a bit of experience in using the <code>io</code> package and
+it&rsquo;s interfaces, please refer to the documentation when unclear. (Here&rsquo;s)[TODO]
+also a nice and gentle introduction you might want to read first. I try to
+show some code where I feel it&rsquo;s necessary, but the end of the article links
+to a variety of <code>io.Reader</code> and <code>io.Writer</code> you might want look into
+if you&rsquo;re a <em>gimme the code!</em>-kind of person.</p>
+
+<p>Just as a reminder, those are the <a href="https://golang.org/pkg/io/">interface definitions from
+io</a> we&rsquo;re talking of:</p>
+
+<p><div class="highlight" style="background: #272822"><pre style="line-height: 125%"><span style="color: #66d9ef">type</span> <span style="color: #a6e22e">Reader</span> <span style="color: #66d9ef">interface</span> <span style="color: #f8f8f2">{</span>
+    <span style="color: #a6e22e">Read</span><span style="color: #f8f8f2">(</span><span style="color: #a6e22e">p</span> <span style="color: #f8f8f2">[]</span><span style="color: #66d9ef">byte</span><span style="color: #f8f8f2">)</span> <span style="color: #f8f8f2">(</span><span style="color: #66d9ef">int</span><span style="color: #f8f8f2">,</span> <span style="color: #66d9ef">error</span><span style="color: #f8f8f2">)</span>
+<span style="color: #f8f8f2">}</span>
+
+<span style="color: #66d9ef">type</span> <span style="color: #a6e22e">Writer</span> <span style="color: #66d9ef">interface</span> <span style="color: #f8f8f2">{</span>
+    <span style="color: #a6e22e">Write</span><span style="color: #f8f8f2">(</span><span style="color: #a6e22e">p</span> <span style="color: #f8f8f2">[]</span><span style="color: #66d9ef">byte</span><span style="color: #f8f8f2">)</span> <span style="color: #f8f8f2">(</span><span style="color: #66d9ef">int</span><span style="color: #f8f8f2">,</span> <span style="color: #66d9ef">error</span><span style="color: #f8f8f2">)</span>
+<span style="color: #f8f8f2">}</span>
+
+<span style="color: #66d9ef">type</span> <span style="color: #a6e22e">Seeker</span> <span style="color: #66d9ef">interface</span> <span style="color: #f8f8f2">{</span>
+    <span style="color: #a6e22e">Seek</span><span style="color: #f8f8f2">(</span><span style="color: #a6e22e">off</span> <span style="color: #66d9ef">int64</span><span style="color: #f8f8f2">,</span> <span style="color: #a6e22e">whence</span> <span style="color: #66d9ef">int</span><span style="color: #f8f8f2">)</span> <span style="color: #f8f8f2">(</span><span style="color: #66d9ef">int64</span><span style="color: #f8f8f2">,</span> <span style="color: #66d9ef">error</span><span style="color: #f8f8f2">)</span>
+<span style="color: #f8f8f2">}</span>
+
+<span style="color: #66d9ef">type</span> <span style="color: #a6e22e">Closer</span>  <span style="color: #66d9ef">interface</span> <span style="color: #f8f8f2">{</span>
+    <span style="color: #a6e22e">Close</span><span style="color: #f8f8f2">()</span> <span style="color: #66d9ef">error</span>
+<span style="color: #f8f8f2">}</span>
+</pre></div>
+</p>
+
+<p>You might notice that there is a bit more to these interfaces, than
+you might expect from a quick glance.</p>
+
+<h2 id="how-much-to-read-write-and-return:1f9b02d070b8cc71a61fea0c5ae37919">How much to read/write and return?</h2>
+
+<p>There is a bit of confusion on what byte count to return when <code>Read/Write</code> is
+called. For <code>Read()</code> it&rsquo;s relatively straightforward: Just return the offset
+where you stopped writing to the provided buffer <code>p</code>.</p>
+
+<p>Some people however get confused when implementing <code>Write()</code>: It&rsquo;s not the
+number of bytes you&rsquo;ve actually written to some underlying layer. It&rsquo;s the
+number of bytes you used from <code>p</code> to write to the underlying stream.  The term
+&ldquo;used&rdquo; means  that you might have cached the input, wrote it directly or
+else wise processed or ignored it. And that number should be the whole length of <code>p</code>.
+Actually I find myself to return this frequently:</p>
+
+<p><div class="highlight" style="background: #272822"><pre style="line-height: 125%"><span style="color: #66d9ef">func</span> <span style="color: #f8f8f2">(</span><span style="color: #a6e22e">x</span> <span style="color: #f92672">*</span><span style="color: #a6e22e">X</span><span style="color: #f8f8f2">)</span> <span style="color: #a6e22e">Write</span><span style="color: #f8f8f2">(</span><span style="color: #a6e22e">p</span> <span style="color: #f8f8f2">[]</span><span style="color: #66d9ef">byte</span><span style="color: #f8f8f2">)</span> <span style="color: #f8f8f2">(</span><span style="color: #66d9ef">int</span><span style="color: #f8f8f2">,</span> <span style="color: #66d9ef">error</span><span style="color: #f8f8f2">)</span> <span style="color: #f8f8f2">{</span>
+    <span style="color: #75715e">// Do something with p: ignore, cache, duplicate or whatever.</span>
+    <span style="color: #66d9ef">return</span> <span style="color: #f8f8f2">len(</span><span style="color: #a6e22e">p</span><span style="color: #f8f8f2">),</span> <span style="color: #66d9ef">nil</span>
+<span style="color: #f8f8f2">}</span>
+</pre></div>
+</p>
+
+<p>Why is returning the correct byte count important? For a lot of reasons.  One
+reason being <code>io.Copy()</code>. If you write less than expected (and <code>Copy()</code>
+expects the whole buffer <code>p</code>) then <a href="https://golang.org/src/io/io.go?s=12235:12295#L391">it will
+bitch</a> at you with a
+<code>ErrShortWrite</code>.</p>
+
+<p>As a general rule of thumb you should always strive to read and write every byte
+you get your hands on, i.e. always fill the buffer on <code>Read</code> as much as
+possible and <code>Write</code> everything you get you get passed (or at least say so).
+This makes the life of the caller easier: If he provides a buffer with 4096
+byte, then he can rely on you that you fill with all the data you have, or will
+return <code>io.EOF</code> and the number of leftover bytes.</p>
+
+<p>Honestly enough, this might make some implementations a bit harder.  But when in
+question, do the work once on your side, otherwise the caller might give you a
+surprise visit at night to <code>Read()</code> your blood.</p>
+
+<h2 id="copying-and-chunking-data:1f9b02d070b8cc71a61fea0c5ae37919">Copying and chunking data</h2>
+
+<p>This should be obvious, but in one case I forgot to do that and spend a few
+hours debugging: you have to copy the data when using <code>io.Writer</code>. You cannot
+rely on the data to be valid after the end of <code>Write()</code>. You can especially
+not just store <code>p</code> for processing it later.</p>
+
+<p>Sometimes you&rsquo;re gonna implement a reader that has to chunk it&rsquo;s underlying
+data. Example: Suppose you&rsquo;re building a reader/writer with compression support.
+The underlying data stream is usually chunked into blocks that need to be read
+and written as a whole. However the caller usually doesn&rsquo;t care and wants as
+little as one byte, 2.37 of your chunks or any arbitrary number.
+This in turn means that you need to read the whole chunk into an internal
+buffer and only pass the requested portion to the outside, or in case of the
+writer, buffer the input until it&rsquo;s big enough for one block.
+Go comes with a data type that&rsquo;s useful for this: <code>bytes.Buffer</code>:</p>
+
+<p><div class="highlight" style="background: #272822"><pre style="line-height: 125%"><span style="color: #75715e">// Example chunking Read() with a internal buffer called `backlog`.</span>
+<span style="color: #66d9ef">func</span> <span style="color: #f8f8f2">(</span><span style="color: #a6e22e">r</span> <span style="color: #f92672">*</span><span style="color: #a6e22e">Reader</span><span style="color: #f8f8f2">)</span> <span style="color: #a6e22e">Read</span><span style="color: #f8f8f2">(</span><span style="color: #a6e22e">dest</span> <span style="color: #f8f8f2">[]</span><span style="color: #66d9ef">byte</span><span style="color: #f8f8f2">)</span> <span style="color: #f8f8f2">(</span><span style="color: #66d9ef">int</span><span style="color: #f8f8f2">,</span> <span style="color: #66d9ef">error</span><span style="color: #f8f8f2">)</span> <span style="color: #f8f8f2">{</span>
+	<span style="color: #a6e22e">readBytes</span> <span style="color: #f92672">:=</span> <span style="color: #ae81ff">0</span>
+
+	<span style="color: #66d9ef">for</span> <span style="color: #a6e22e">readBytes</span> <span style="color: #f8f8f2">&lt;</span> <span style="color: #f8f8f2">len(</span><span style="color: #a6e22e">dest</span><span style="color: #f8f8f2">)</span> <span style="color: #f8f8f2">{</span>
+		<span style="color: #66d9ef">if</span> <span style="color: #a6e22e">r</span><span style="color: #f8f8f2">.</span><span style="color: #a6e22e">backlog</span><span style="color: #f8f8f2">.</span><span style="color: #a6e22e">Len</span><span style="color: #f8f8f2">()</span> <span style="color: #f92672">==</span> <span style="color: #ae81ff">0</span> <span style="color: #f8f8f2">{</span>
+			<span style="color: #66d9ef">if</span> <span style="color: #a6e22e">_</span><span style="color: #f8f8f2">,</span> <span style="color: #a6e22e">err</span> <span style="color: #f92672">:=</span> <span style="color: #a6e22e">r</span><span style="color: #f8f8f2">.</span><span style="color: #a6e22e">readBlock</span><span style="color: #f8f8f2">();</span> <span style="color: #a6e22e">err</span> <span style="color: #f92672">!=</span> <span style="color: #66d9ef">nil</span> <span style="color: #f8f8f2">{</span>
+				<span style="color: #66d9ef">return</span> <span style="color: #a6e22e">readBytes</span><span style="color: #f8f8f2">,</span> <span style="color: #a6e22e">err</span>
+			<span style="color: #f8f8f2">}</span>
+		<span style="color: #f8f8f2">}</span>
+
+		<span style="color: #a6e22e">n</span><span style="color: #f8f8f2">,</span> <span style="color: #a6e22e">_</span> <span style="color: #f92672">:=</span> <span style="color: #a6e22e">r</span><span style="color: #f8f8f2">.</span><span style="color: #a6e22e">backlog</span><span style="color: #f8f8f2">.</span><span style="color: #a6e22e">Read</span><span style="color: #f8f8f2">(</span><span style="color: #a6e22e">dest</span><span style="color: #f8f8f2">[</span><span style="color: #a6e22e">readBytes</span><span style="color: #f8f8f2">:])</span>
+		<span style="color: #a6e22e">readBytes</span> <span style="color: #f92672">+=</span> <span style="color: #a6e22e">n</span>
+	<span style="color: #f8f8f2">}</span>
+
+	<span style="color: #66d9ef">return</span> <span style="color: #a6e22e">readBytes</span><span style="color: #f8f8f2">,</span> <span style="color: #66d9ef">nil</span>
+<span style="color: #f8f8f2">}</span>
+</pre></div>
+</p>
+
+<p>More performance might be doable by implementing a true, <a href="https://github.com/glycerine/rbuf">fixed size ring
+buffer</a>.  And sometimes even more convenience
+can be achieved by using <a href="https://golang.org/pkg/bufio/#NewReaderSize">bufio</a>.</p>
+
+<p>That said, ,,zero-copying&rdquo; is not directly supported by the concept of <code>Write()
+/ Read()</code>, but you can use the  <code>io.WriteTo</code> and <code>io.ReadFrom</code> interfaces
+for this.  <code>io.Copy()</code> will automatically use them if present.</p>
+
+<p>TODO: WriteTo/ReadFrom == zero copy?</p>
+
+<h2 id="stacking-writers-and-readers:1f9b02d070b8cc71a61fea0c5ae37919">Stacking writers and readers</h2>
+
+<p>A popular use of <code>io.Reader/Writer</code> is stacking them up, making one
+transformation per layer. Example: <code>brig</code> uses this extensively by providing a
+<code>Overlay</code>-writer over a <code>Compression</code>-writer over a <code>Encryption</code>-writer
+that in turns feeds it&rsquo;s data to a <code>DAGWriter</code> provided by <code>ipfs</code>. Some
+<code>bytes.Buffer</code> and <code>bufio.Writer</code> are sandwiched in there too.
+The read side does almost the same thing, but mirrored.</p>
+
+<p>The semantics are relatively clear here for <code>Read() / Write() / Seek()</code> but
+<code>Close()</code> is the odd kid in the class. Is <code>Close()</code> on the top-layer supposed to
+close only itself or also everything below? This might not what you might
+expect though, although it would be somewhat convenient, since you might not
+always have access to all layers.</p>
+
+<p>My general advice is: <em>Close everything separately.</em></p>
+
+<p>Some people won&rsquo;t listen to advice though and might try something like this in
+their implementation:</p>
+
+<p><div class="highlight" style="background: #272822"><pre style="line-height: 125%"><span style="color: #66d9ef">func</span> <span style="color: #f8f8f2">(</span><span style="color: #a6e22e">r</span> <span style="color: #f92672">*</span><span style="color: #a6e22e">Reader</span><span style="color: #f8f8f2">)</span> <span style="color: #a6e22e">Close</span><span style="color: #f8f8f2">()</span> <span style="color: #66d9ef">error</span> <span style="color: #f8f8f2">{</span>
+    <span style="color: #75715e">// Try to close the underlying reader if supported:</span>
+    <span style="color: #a6e22e">closer</span><span style="color: #f8f8f2">,</span> <span style="color: #a6e22e">ok</span> <span style="color: #f92672">:=</span> <span style="color: #a6e22e">r</span><span style="color: #f8f8f2">.</span><span style="color: #a6e22e">rawR</span><span style="color: #f8f8f2">.(</span><span style="color: #a6e22e">io</span><span style="color: #f8f8f2">.</span><span style="color: #a6e22e">Closer</span><span style="color: #f8f8f2">)</span>
+    <span style="color: #66d9ef">if</span> <span style="color: #a6e22e">ok</span> <span style="color: #f8f8f2">{</span>
+        <span style="color: #66d9ef">return</span> <span style="color: #a6e22e">closer</span><span style="color: #f8f8f2">.</span><span style="color: #a6e22e">Close</span><span style="color: #f8f8f2">()</span>
+    <span style="color: #f8f8f2">}</span>
+
+    <span style="color: #66d9ef">return</span> <span style="color: #66d9ef">nil</span>
+<span style="color: #f8f8f2">}</span>
+</pre></div>
+</p>
+
+<p>This has some drawbacks. The most obvious one is that all your readers need to
+implement that pattern. Even those from some libraries you don&rsquo;t control.
+Also, even if you have control over all of them, it&rsquo;s enough to insert
+a normal <code>io.Reader</code> (one without being a <code>io.Closer</code>) into the chain in
+order to break the close-chain. <em>Please don&rsquo;t do this.</em></p>
+
+<p>A better approach might be implementing and maintaining a separate <code>CloseStack</code>:</p>
+
+<p><div class="highlight" style="background: #272822"><pre style="line-height: 125%"><span style="color: #66d9ef">type</span> <span style="color: #a6e22e">CloseStack</span> <span style="color: #66d9ef">struct</span> <span style="color: #f8f8f2">{</span>
+	<span style="color: #a6e22e">stack</span> <span style="color: #f8f8f2">[]</span><span style="color: #a6e22e">io</span><span style="color: #f8f8f2">.</span><span style="color: #a6e22e">Closer</span>
+<span style="color: #f8f8f2">}</span>
+
+<span style="color: #66d9ef">func</span> <span style="color: #f8f8f2">(</span><span style="color: #a6e22e">s</span> <span style="color: #f92672">*</span><span style="color: #a6e22e">CloseStack</span><span style="color: #f8f8f2">)</span> <span style="color: #a6e22e">Push</span><span style="color: #f8f8f2">(</span><span style="color: #a6e22e">cls</span> <span style="color: #a6e22e">io</span><span style="color: #f8f8f2">.</span><span style="color: #a6e22e">Closer</span><span style="color: #f8f8f2">)</span> <span style="color: #f8f8f2">{</span>
+	<span style="color: #a6e22e">s</span><span style="color: #f8f8f2">.</span><span style="color: #a6e22e">stack</span> <span style="color: #f8f8f2">=</span> <span style="color: #f8f8f2">append(</span><span style="color: #a6e22e">s</span><span style="color: #f8f8f2">.</span><span style="color: #a6e22e">stack</span><span style="color: #f8f8f2">,</span> <span style="color: #a6e22e">cls</span><span style="color: #f8f8f2">)</span>
+<span style="color: #f8f8f2">}</span>
+
+<span style="color: #66d9ef">func</span> <span style="color: #f8f8f2">(</span><span style="color: #a6e22e">s</span> <span style="color: #f92672">*</span><span style="color: #a6e22e">CloseStack</span><span style="color: #f8f8f2">)</span> <span style="color: #a6e22e">Close</span><span style="color: #f8f8f2">()</span> <span style="color: #66d9ef">error</span> <span style="color: #f8f8f2">{</span>
+    <span style="color: #66d9ef">var</span> <span style="color: #a6e22e">err</span> <span style="color: #66d9ef">error</span>
+    <span style="color: #66d9ef">for</span> <span style="color: #a6e22e">i</span> <span style="color: #f92672">:=</span> <span style="color: #ae81ff">0</span><span style="color: #f8f8f2">;</span> <span style="color: #a6e22e">i</span> <span style="color: #f8f8f2">&lt;</span> <span style="color: #f8f8f2">len(</span><span style="color: #a6e22e">s</span><span style="color: #f8f8f2">.</span><span style="color: #a6e22e">stack</span><span style="color: #f8f8f2">);</span> <span style="color: #a6e22e">i</span><span style="color: #f92672">++</span> <span style="color: #f8f8f2">{</span>
+        <span style="color: #a6e22e">cl</span> <span style="color: #f92672">:=</span> <span style="color: #a6e22e">s</span><span style="color: #f8f8f2">.</span><span style="color: #a6e22e">stack</span><span style="color: #f8f8f2">[len(</span><span style="color: #a6e22e">s</span><span style="color: #f8f8f2">.</span><span style="color: #a6e22e">stack</span><span style="color: #f8f8f2">)</span><span style="color: #f92672">-</span><span style="color: #a6e22e">i</span><span style="color: #f92672">-</span><span style="color: #ae81ff">1</span><span style="color: #f8f8f2">]</span>
+        <span style="color: #66d9ef">if</span> <span style="color: #a6e22e">clErr</span> <span style="color: #f92672">:=</span> <span style="color: #a6e22e">cl</span><span style="color: #f8f8f2">.</span><span style="color: #a6e22e">Close</span><span style="color: #f8f8f2">();</span> <span style="color: #a6e22e">err</span> <span style="color: #f92672">==</span> <span style="color: #66d9ef">nil</span> <span style="color: #f92672">&amp;&amp;</span> <span style="color: #a6e22e">clErr</span> <span style="color: #f92672">!=</span> <span style="color: #66d9ef">nil</span> <span style="color: #f8f8f2">{</span>
+            <span style="color: #75715e">// Remember first error:</span>
+            <span style="color: #a6e22e">err</span> <span style="color: #f8f8f2">=</span> <span style="color: #a6e22e">clErr</span>
+        <span style="color: #f8f8f2">}</span>
+    <span style="color: #f8f8f2">}</span>
+
+    <span style="color: #66d9ef">return</span> <span style="color: #a6e22e">err</span>
+<span style="color: #f8f8f2">}</span>
+
+<span style="color: #66d9ef">type</span> <span style="color: #a6e22e">dummyCloser</span> <span style="color: #66d9ef">struct</span> <span style="color: #f8f8f2">{</span> <span style="color: #a6e22e">id</span> <span style="color: #66d9ef">int</span> <span style="color: #f8f8f2">}</span>
+
+<span style="color: #66d9ef">func</span> <span style="color: #f8f8f2">(</span><span style="color: #a6e22e">d</span> <span style="color: #a6e22e">dummyCloser</span><span style="color: #f8f8f2">)</span> <span style="color: #a6e22e">Close</span><span style="color: #f8f8f2">()</span> <span style="color: #66d9ef">error</span> <span style="color: #f8f8f2">{</span>
+	<span style="color: #a6e22e">fmt</span><span style="color: #f8f8f2">.</span><span style="color: #a6e22e">Printf</span><span style="color: #f8f8f2">(</span><span style="color: #e6db74">&quot;Closing %d\n&quot;</span><span style="color: #f8f8f2">,</span> <span style="color: #a6e22e">d</span><span style="color: #f8f8f2">.</span><span style="color: #a6e22e">id</span><span style="color: #f8f8f2">)</span>
+	<span style="color: #66d9ef">return</span> <span style="color: #66d9ef">nil</span>
+<span style="color: #f8f8f2">}</span>
+
+<span style="color: #66d9ef">func</span> <span style="color: #a6e22e">main</span><span style="color: #f8f8f2">()</span> <span style="color: #f8f8f2">{</span>
+    <span style="color: #a6e22e">chain</span> <span style="color: #f92672">:=</span> <span style="color: #f92672">&amp;</span><span style="color: #a6e22e">CloseStack</span><span style="color: #f8f8f2">{}</span>
+
+    <span style="color: #66d9ef">for</span> <span style="color: #a6e22e">i</span> <span style="color: #f92672">:=</span> <span style="color: #ae81ff">0</span><span style="color: #f8f8f2">;</span> <span style="color: #a6e22e">i</span> <span style="color: #f8f8f2">&lt;</span> <span style="color: #ae81ff">4</span><span style="color: #f8f8f2">;</span> <span style="color: #a6e22e">i</span><span style="color: #f92672">++</span> <span style="color: #f8f8f2">{</span>
+	    <span style="color: #a6e22e">chain</span><span style="color: #f8f8f2">.</span><span style="color: #a6e22e">Push</span><span style="color: #f8f8f2">(</span><span style="color: #a6e22e">dummyCloser</span><span style="color: #f8f8f2">{</span><span style="color: #a6e22e">i</span> <span style="color: #f92672">+</span> <span style="color: #ae81ff">1</span><span style="color: #f8f8f2">})</span>
+    <span style="color: #f8f8f2">}</span>
+
+    <span style="color: #75715e">// Prints numbers from 4 till 1. </span>
+    <span style="color: #a6e22e">chain</span><span style="color: #f8f8f2">.</span><span style="color: #a6e22e">Close</span><span style="color: #f8f8f2">()</span>
+<span style="color: #f8f8f2">}</span>
+</pre></div>
+</p>
+
+<p>When stacking readers/writers with different abilities (e.g. one
+<code>io.ReadCloser</code> over a <code>io.ReadSeeker</code>), it&rsquo;s useful to keep those abilities
+on the top layer if possible. This can be stupidly done by implementing a dummy
+method of e.g.  <code>Seek()</code> that just calls the underlying <code>Seek()</code>. Besides a
+little performance penalty, it introduces a tiny bit of boilerplate code.  Go&rsquo;s
+<a href="http://www.hydrogen18.com/blog/golang-embedding.html">interface embedding</a>
+makes this slightly easier:</p>
+
+<p><div class="highlight" style="background: #272822"><pre style="line-height: 125%"><span style="color: #66d9ef">type</span> <span style="color: #a6e22e">A</span> <span style="color: #66d9ef">struct</span> <span style="color: #f8f8f2">{</span>
+	<span style="color: #a6e22e">io</span><span style="color: #f8f8f2">.</span><span style="color: #a6e22e">ReadSeeker</span>
+<span style="color: #f8f8f2">}</span>
+
+<span style="color: #66d9ef">func</span> <span style="color: #f8f8f2">(</span><span style="color: #a6e22e">a</span> <span style="color: #f92672">*</span><span style="color: #a6e22e">A</span><span style="color: #f8f8f2">)</span> <span style="color: #a6e22e">Read</span><span style="color: #f8f8f2">(</span><span style="color: #a6e22e">buf</span> <span style="color: #f8f8f2">[]</span><span style="color: #66d9ef">byte</span><span style="color: #f8f8f2">)</span> <span style="color: #f8f8f2">(</span><span style="color: #66d9ef">int</span><span style="color: #f8f8f2">,</span> <span style="color: #66d9ef">error</span><span style="color: #f8f8f2">)</span> <span style="color: #f8f8f2">{</span>
+	<span style="color: #66d9ef">return</span> <span style="color: #ae81ff">0</span><span style="color: #f8f8f2">,</span> <span style="color: #66d9ef">nil</span>
+<span style="color: #f8f8f2">}</span>
+
+<span style="color: #66d9ef">type</span> <span style="color: #a6e22e">B</span> <span style="color: #66d9ef">struct</span> <span style="color: #f8f8f2">{</span>
+	<span style="color: #a6e22e">io</span><span style="color: #f8f8f2">.</span><span style="color: #a6e22e">ReadSeeker</span>
+	<span style="color: #a6e22e">io</span><span style="color: #f8f8f2">.</span><span style="color: #a6e22e">Closer</span>
+<span style="color: #f8f8f2">}</span>
+
+<span style="color: #66d9ef">func</span> <span style="color: #a6e22e">main</span><span style="color: #f8f8f2">()</span> <span style="color: #f8f8f2">{</span>
+    <span style="color: #a6e22e">src</span> <span style="color: #f92672">:=</span> <span style="color: #a6e22e">bytes</span><span style="color: #f8f8f2">.</span><span style="color: #a6e22e">NewReader</span><span style="color: #f8f8f2">([]</span><span style="color: #66d9ef">byte</span><span style="color: #f8f8f2">{})</span>
+	<span style="color: #a6e22e">low</span> <span style="color: #f92672">:=</span> <span style="color: #f92672">&amp;</span><span style="color: #a6e22e">A</span><span style="color: #f8f8f2">{</span><span style="color: #a6e22e">src</span><span style="color: #f8f8f2">}</span>
+	<span style="color: #a6e22e">top</span> <span style="color: #f92672">:=</span> <span style="color: #f92672">&amp;</span><span style="color: #a6e22e">B</span><span style="color: #f8f8f2">{</span><span style="color: #a6e22e">low</span><span style="color: #f8f8f2">,</span> <span style="color: #a6e22e">ioutil</span><span style="color: #f8f8f2">.</span><span style="color: #a6e22e">NopCloser</span><span style="color: #f8f8f2">(</span><span style="color: #a6e22e">low</span><span style="color: #f8f8f2">)}</span>
+
+	<span style="color: #75715e">// Calls bytes.Reader&#39;s Seek()</span>
+	<span style="color: #a6e22e">top</span><span style="color: #f8f8f2">.</span><span style="color: #a6e22e">Seek</span><span style="color: #f8f8f2">(</span><span style="color: #ae81ff">0</span><span style="color: #f8f8f2">,</span> <span style="color: #a6e22e">os</span><span style="color: #f8f8f2">.</span><span style="color: #a6e22e">SEEK_CUR</span><span style="color: #f8f8f2">)</span>
+
+	<span style="color: #75715e">// Calls A&#39;s Read()</span>
+	<span style="color: #a6e22e">top</span><span style="color: #f8f8f2">.</span><span style="color: #a6e22e">Read</span><span style="color: #f8f8f2">(</span><span style="color: #66d9ef">nil</span><span style="color: #f8f8f2">)</span>
+<span style="color: #f8f8f2">}</span>
+</pre></div>
+</p>
+
+<p>Beware a bit of this method though, since it tends to make code slightly
+confusing. It was <a href="https://golang.org/src/io/ioutil/ioutil.go#L114">inspired</a> by
+the Go&rsquo;s builtin <code>ioutil.NopCloser</code> (why the heck does this only exist for
+<code>io.Reader</code>, not <code>io.Writer</code>, Rob?).</p>
+
+<h2 id="seek-is-hard:1f9b02d070b8cc71a61fea0c5ae37919"><code>Seek()</code> is hard</h2>
+
+<p><code>Seek()</code> is a handy interface, but when using it, it always feels like a bit
+the 1970s could ring you any moment. You probably already figured out yourself,
+what Im gonna tell you in the next few lines though.</p>
+
+<p>Chances are, when you think about implementing <code>Seek()</code>, that you need
+to map from an underlying stream to a virtual, somehow processed stream.
+<code>Seek()</code>&rsquo;s job is then to position your stream at a certain offset - and
+this is offset is relative to the virtual stream which the user sees (popular
+beginner mistake: mixing offset types). Example: A Reader that &ldquo;skips&rdquo; a header
+in front of the actual data. In this case <code>Seek()</code> just needs to add the
+length of the header to get the underlying offset from the virtual offset.
+An exercise for the reader is imagining a <code>Seek()</code> that maps from a (virtual)
+uncompressed stream to an (underlying) compressed data stream. You&rsquo;ll notice
+that <code>Seek()</code> gets a little harder in that case.</p>
+
+<p>Another source of confusion is what <code>Seek()</code> does for a <code>io.ReadWriter</code>.
+Answer: It depends on the implementation. In most cases it&rsquo;s probably moving
+the read offset. In some both. In a few cases it might even make sense to only
+moving the write pointer. Consult your manual or a doctor.</p>
+
+<p>In some usecases you may not be able to provide the full spec of <code>Seek()</code>.
+Imagine a stream of data you consume bytewise. You can&rsquo;t go back, since caching
+all previous input might be no option (How to handle <code>SEEK_CUR</code> with negative
+offset?). Or you might process a video stream, where you don&rsquo;t know when it ends
+(how to handle <code>SEEK_END</code>?). Is it okay to return something like
+<code>ErrNotImplemented</code> in this case? Probably, but my advice would be either
+to document that clearly or use a different function name than <code>Seek()</code> which
+makes clear it&rsquo;s not a full <code>Seek()</code> implementation.</p>
+
+<p><a href="https://golang.org/pkg/io/#ReaderAt">There is also</a> <code>ReaderAt</code> which is a bit
+like a combined seek &amp; read. You might know this from <code>preadv(3)</code> on (some)
+Unix-derivatives. An important difference is that it allows the caller to
+call <code>ReadAt()</code> in parallel.
+Once you have <code>Seek()</code> you can easily implement <code>ReadAt()</code>, although you
+might need to introduce an additional locking mechanism for the parallel reads.</p>
+
+<p>By the way, if you want to go back from the end, you have to use <code>SEEK_END</code> with
+a negative offset. No, not a positive offset. Popular mistake.</p>
+
+<h2 id="the-perks-of-io-eof:1f9b02d070b8cc71a61fea0c5ae37919">The perks of <code>io.EOF</code></h2>
+
+<p>The story of EOF is a story full of misunderstandings.
+In C it was a the <code>#define</code> on the number <code>-1</code> and it was returned by
+<code>read(3)</code>.  This led some people to the misunderstanding that <code>EOF</code>
+was actually a character that sits at the end of the file, waiting for you to
+be consumed. Kind of weird thinking when you can only read the numbers [0-255]
+from a byte. Go has you covered here: <code>io.EOF</code> is just an error return value,
+that you should check on.</p>
+
+<p>Some users falsely expect that no data was read when <code>io.EOF</code> is returned.
+This is usually not true, there might be any valid number of bytes read before
+reaching the end of the file (that&rsquo;s why you always check for <code>io.EOF</code> separately).
+Note that many current Readers behave slightly different: They return <code>nil</code> on
+the last block of data, but will return a byte count of 0 and <code>io.EOF</code> on the
+next <code>Read()</code> call.  That&rsquo;s slightly less convenient, but okay too.</p>
+
+<p>It gets a bit confusing when seeking to or over the end of a file.
+What will <code>Seek()</code> return? The offset of the stream end? <code>io.EOF</code> as error?
+Is seeking back allowed after hitting EOF?
+There is no answer, since this depends on the implementation.
+Example: For some writers it might make sense to seek over the end of the file
+and write something there &mdash; an overlay writer (see below TODO) is a good
+example for this. Other usecases might have different needs.</p>
+
+<p><em>Conclusion:</em> You should always think about <code>io.EOF</code> and whether you need
+to check for it separately. If you come from other languages: reading an empty
+file in Go will return <code>0 / io.EOF</code> on the <em>first</em> read.</p>
+
+<h1 id="an-io-showcase:1f9b02d070b8cc71a61fea0c5ae37919">An <code>io</code> showcase</h1>
+
+<p>To round this writing up, here are some of the more interesting
+<code>io.Reader/Writers</code> in <code>brig</code>. Some might be useful in other applications:</p>
+
+<h2 id="sizeaccumulator-https-godoc-org-github-com-disorganizer-brig-util-sizeaccumulator:1f9b02d070b8cc71a61fea0c5ae37919"><a href="https://godoc.org/github.com/disorganizer/brig/util#SizeAccumulator">SizeAccumulator</a></h2>
+
+<p>A small <code>io.Writer</code> that simply counts the number of bytes written to it.
+This is very useful in conjunction with <code>io.TeeReader</code> to count how many
+bytes of data were written to the underlying stream of data (Remember: <code>Write()</code> will tell
+you the number of bytes taken as input). Example without error handling:</p>
+
+<p><div class="highlight" style="background: #272822"><pre style="line-height: 125%"><span style="color: #66d9ef">func</span> <span style="color: #a6e22e">hello</span><span style="color: #f8f8f2">()</span> <span style="color: #f8f8f2">{</span>
+	<span style="color: #a6e22e">s</span> <span style="color: #f92672">:=</span> <span style="color: #f92672">&amp;</span><span style="color: #a6e22e">SizeAccumulator</span><span style="color: #f8f8f2">{}</span>
+	<span style="color: #a6e22e">teeR</span> <span style="color: #f92672">:=</span> <span style="color: #a6e22e">io</span><span style="color: #f8f8f2">.</span><span style="color: #a6e22e">TeeReader</span><span style="color: #f8f8f2">(</span><span style="color: #a6e22e">bytes</span><span style="color: #f8f8f2">.</span><span style="color: #a6e22e">NewReader</span><span style="color: #f8f8f2">([]byte(</span><span style="color: #e6db74">&quot;Hello, &quot;</span><span style="color: #f8f8f2">)),</span> <span style="color: #a6e22e">s</span><span style="color: #f8f8f2">)</span>
+	<span style="color: #a6e22e">io</span><span style="color: #f8f8f2">.</span><span style="color: #a6e22e">Copy</span><span style="color: #f8f8f2">(</span><span style="color: #a6e22e">os</span><span style="color: #f8f8f2">.</span><span style="color: #a6e22e">Stdout</span><span style="color: #f8f8f2">,</span> <span style="color: #a6e22e">teeR</span><span style="color: #f8f8f2">)</span>
+	<span style="color: #a6e22e">fmt</span><span style="color: #f8f8f2">.</span><span style="color: #a6e22e">Printf</span><span style="color: #f8f8f2">(</span><span style="color: #e6db74">&quot;wrote %d bytes to stdout\n&quot;</span><span style="color: #f8f8f2">,</span> <span style="color: #a6e22e">s</span><span style="color: #f8f8f2">.</span><span style="color: #a6e22e">Size</span><span style="color: #f8f8f2">())</span>
+	<span style="color: #75715e">// Output: Hello, wrote 7 bytes to stdout</span>
+<span style="color: #f8f8f2">}</span>
+</pre></div>
+</p>
+
+<h2 id="timeoutwriter-timeoutreader-https-godoc-org-github-com-disorganizer-brig-util-timeoutwriter:1f9b02d070b8cc71a61fea0c5ae37919"><a href="https://godoc.org/github.com/disorganizer/brig/util#TimeoutWriter">TimeoutWriter / TimeoutReader</a></h2>
+
+<p>A <code>io.Reader</code> and a <code>io.Writer</code> that wraps another reader or writer.
+If the respective operation is not done until a certain deadline, it will
+return. Any results arriving later will be dismissed.</p>
+
+<p>TODO: Write.</p>
+
+<h2 id="seekbuffer-https-godoc-org-github-com-disorganizer-brig-util-seekbuffer:1f9b02d070b8cc71a61fea0c5ae37919"><a href="https://godoc.org/github.com/disorganizer/brig/util#SeekBuffer">SeekBuffer</a></h2>
+
+<p>A <code>bytes.Buffer</code> that supports <code>Seek()</code>. The <code>Seek()</code> call
+will move both the read and write offset. Go&rsquo;s <code>bytes.Buffer</code> does not
+support <code>Seek()</code> because it would be unclear what <code>Seek()</code> would do on it
+and because <code>bytes.Buffer</code> is not required to hold all data that has been
+read already. <code>SeekBuffer</code> is stupid and can do this therefore.
+(Never underestimate the power of stupid things.)</p>
+
+<h2 id="syncreadwriter-https-godoc-org-github-com-disorganizer-brig-util-syncreadwriter:1f9b02d070b8cc71a61fea0c5ae37919"><a href="https://godoc.org/github.com/disorganizer/brig/util#SyncReadWriter">SyncReadWriter</a></h2>
+
+<p>Simply a <code>io.ReadWriter</code> that protects each call of <code>Read()</code> and <code>Write()</code>
+with a <code>sync.Mutex</code>. Very useful for simulating a &ldquo;network&rdquo; where each party
+might want to write or read to the network at any time.</p>
+
+<h2 id="tunnel-https-godoc-org-github-com-disorganizer-brig-util-tunnel:1f9b02d070b8cc71a61fea0c5ae37919"><a href="https://godoc.org/github.com/disorganizer/brig/util/tunnel">Tunnel</a></h2>
+
+<p>A <code>io.ReadWriter</code> that encrypts data written to it and decrypts it on
+<code>Read()</code>. It uses elliptic curve diffie-hellman to estimate an AES-key between
+both sides.  While it provides good encryption, it does not provide any
+authentication, nor does it provide suitable protection against man-in-the-middle
+attacks. It&rsquo;s the caller&rsquo;s responsibility to make sure he&rsquo;s actually speaking to
+the right party.</p>
+
+<h2 id="layer-https-godoc-org-github-com-disorganizer-brig-store-layer:1f9b02d070b8cc71a61fea0c5ae37919"><a href="https://godoc.org/github.com/disorganizer/brig/store#Layer">Layer</a></h2>
+
+<p>A <code>io.ReadWriter</code> that <em>overlays</em> a <code>io.Reader</code>. Every write is cached in
+memory and merged together with the actual data on the next read.
+<code>Seek()</code> is supported and may be used to seek over the end of the original
+data stream in order to extend the stream. Additionally the stream may be
+truncated.</p>
+
+<h2 id="compress-readseeker-compress-writer-https-godoc-org-github-com-disorganizer-brig-store-compress:1f9b02d070b8cc71a61fea0c5ae37919"><a href="https://godoc.org/github.com/disorganizer/brig/store/compress">compress.ReadSeeker / compress.Writer</a></h2>
+
+<p>Compressed and decompresses input using a variety of different compression
+algorithms (<code>none</code> is also supported). The greatest benefit compared to other
+implementations is the support for <code>Seek()</code> in the reader part.</p>
+
+<h2 id="encrypt-readseeker-encrypt-writer-https-godoc-org-github-com-disorganizer-brig-store-encrypt:1f9b02d070b8cc71a61fea0c5ae37919"><a href="https://godoc.org/github.com/disorganizer/brig/store/encrypt">encrypt.ReadSeeker / encrypt.Writer</a></h2>
+
+<p>Encrypts and decrypts input using AES-GCM or ChaCha20. The data is chunked into
+blocks (consisting of a nonce, a MAC and the data) and a header which contains
+the settings used for encryption. It supports <code>Seek()</code> in the reader part.</p>
+
+<h1 id="conclusion:1f9b02d070b8cc71a61fea0c5ae37919">Conclusion</h1>
+
+<p>Phew, that was a lot of text. I know some of you will just skip here for a
+TL;DR. Those lazy bastards shall have this checklist:</p>
+
+<ul>
+<li>Make your <code>io.Reader</code> and <code>io.Writer</code> is (easily) stackable.</li>
+<li>Implement <code>WriteTo/ReadFrom</code> for (possibly) less copying.</li>
+</ul>
+
+<p>As final tip: You might want to use these packages when testing your <code>io.*</code>
+stuff (or get inspiration from):</p>
+
+<ul>
+<li><a href="https://golang.org/pkg/testing/iotest">https://golang.org/pkg/testing/iotest</a>.</li>
+<li><a href="https://golang.org/pkg/io/ioutil/">https://golang.org/pkg/io/ioutil/</a></li>
+<li><a href="https://godoc.org/github.com/disorganizer/brig/util/testutil">https://godoc.org/github.com/disorganizer/brig/util/testutil</a></li>
+</ul>
+
+<p><em>Remember:</em> You don&rsquo;t need to write files on disk. Use in-memory buffers
+(<code>&amp;bytes.Buffer{}</code>!) in your tests for performance and reproducibility.</p>
+
+<p>TODO: Points to fix:</p>
+
+<ul>
+<li>Embedded interfaces (easier stacking)</li>
+<li>No Close() on Close()</li>
+<li>bufio?</li>
+<li>WriteTo/ReadFrom.</li>
+</ul>
+
+  </section>
+</article>
+
+</main>
+
+
+</div>
+
+<footer>
+  <div class="container">
+    <span class="copyright">&copy; 2016  brig devlog - <a rel="license" href="http://creativecommons.org/licenses/by/4.0/">CC BY 4.0</a></span>
+  </div>
+</footer>
+
+</body>
+</html>
+
