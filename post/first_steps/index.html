@@ -5,7 +5,7 @@
 <meta name="description" content="First devlog entry">
 <meta name="keywords" content="">
 <meta name="author" content="">
-<meta name="generator" content="Hugo 0.16-DEV" />
+<meta name="generator" content="Hugo 0.14" />
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <link rel="stylesheet" href="https://disorganizer.github.io/blog/css/style.css" type="text/css">
 <link rel="stylesheet" href="https://fonts.googleapis.com/css?family=Source+Code+Pro:400,700" type="text/css">
@@ -74,7 +74,7 @@ but you just have a <code>io.Writer</code>, then <code>io.Pipe()</code> should p
 
 <p>Here&rsquo;s how it looks in practice:</p>
 
-<div class="highlight" style="background: #272822"><pre style="line-height: 125%"><span style="color: #66d9ef">func</span> <span style="color: #a6e22e">NewFileReader</span><span style="color: #f8f8f2">(</span><span style="color: #a6e22e">key</span> <span style="color: #f8f8f2">[]</span><span style="color: #66d9ef">byte</span><span style="color: #f8f8f2">,</span> <span style="color: #a6e22e">r</span> <span style="color: #a6e22e">io</span><span style="color: #f8f8f2">.</span><span style="color: #a6e22e">Reader</span><span style="color: #f8f8f2">)</span> <span style="color: #f8f8f2">(</span><span style="color: #a6e22e">io</span><span style="color: #f8f8f2">.</span><span style="color: #a6e22e">Reader</span><span style="color: #f8f8f2">,</span> <span style="color: #66d9ef">error</span><span style="color: #f8f8f2">)</span> <span style="color: #f8f8f2">{</span>
+<p><div class="highlight" style="background: #272822"><pre style="line-height: 125%"><span style="color: #66d9ef">func</span> <span style="color: #a6e22e">NewFileReader</span><span style="color: #f8f8f2">(</span><span style="color: #a6e22e">key</span> <span style="color: #f8f8f2">[]</span><span style="color: #66d9ef">byte</span><span style="color: #f8f8f2">,</span> <span style="color: #a6e22e">r</span> <span style="color: #a6e22e">io</span><span style="color: #f8f8f2">.</span><span style="color: #a6e22e">Reader</span><span style="color: #f8f8f2">)</span> <span style="color: #f8f8f2">(</span><span style="color: #a6e22e">io</span><span style="color: #f8f8f2">.</span><span style="color: #a6e22e">Reader</span><span style="color: #f8f8f2">,</span> <span style="color: #66d9ef">error</span><span style="color: #f8f8f2">)</span> <span style="color: #f8f8f2">{</span>
 	<span style="color: #a6e22e">pr</span><span style="color: #f8f8f2">,</span> <span style="color: #a6e22e">pw</span> <span style="color: #f92672">:=</span> <span style="color: #a6e22e">io</span><span style="color: #f8f8f2">.</span><span style="color: #a6e22e">Pipe</span><span style="color: #f8f8f2">()</span>
 
 	<span style="color: #75715e">// Setup the writer part:</span>
@@ -101,7 +101,7 @@ but you just have a <code>io.Writer</code>, then <code>io.Pipe()</code> should p
 	<span style="color: #66d9ef">return</span> <span style="color: #a6e22e">pr</span><span style="color: #f8f8f2">,</span> <span style="color: #66d9ef">nil</span>
 <span style="color: #f8f8f2">}</span>
 </pre></div>
-
+</p>
 
 <p>That&rsquo;s all for today! For tomorrow a cleanup session is planned and the piece
 of code that derives the AES-Key from an unencrypted file.</p>

@@ -6,8 +6,445 @@
     <description>Recent content in Brig on brig devlog</description>
     <generator>Hugo -- gohugo.io</generator>
     <language>en-us</language>
-    <lastBuildDate>Thu, 11 Feb 2016 19:26:59 +0100</lastBuildDate>
+    <lastBuildDate>Mon, 22 Feb 2016 18:44:51 +0100</lastBuildDate>
     <atom:link href="https://disorganizer.github.io/blog/tags/brig/index.xml" rel="self" type="application/rss+xml" />
+    
+    <item>
+      <title>The semantics of io</title>
+      <link>https://disorganizer.github.io/blog/post/io/</link>
+      <pubDate>Mon, 22 Feb 2016 18:44:51 +0100</pubDate>
+      
+      <guid>https://disorganizer.github.io/blog/post/io/</guid>
+      <description>
+
+&lt;p&gt;When using Go, you can&amp;rsquo;t get far without using one of &lt;code&gt;io.Reader&lt;/code&gt; or
+&lt;code&gt;io.Writer&lt;/code&gt;. If you tinkered a bit more with the language it&amp;rsquo;s also almost
+certain that you wrote a &lt;code&gt;io.{Reader,Writer}&lt;/code&gt; yourself. In fact, &lt;code&gt;brig&lt;/code&gt;
+currently implements 9 &lt;code&gt;io.Writer&lt;/code&gt; and 7 &lt;code&gt;io.Reader&lt;/code&gt;, 4 of them with
+additional support for &lt;code&gt;io.Seeker&lt;/code&gt;. Some of them closable, some not. Some of
+them wrapping other writers, some not. It&amp;rsquo;s a great concept, since they&amp;rsquo;re very
+re-usable and allow a program to operate on arbitrary streams of data, without
+being bound on where the data actually comes from. It might come from
+the network, a file or &lt;code&gt;stdin&lt;/code&gt;.&lt;/p&gt;
+
+&lt;p&gt;While writing those, I noticed that there are implied rules which might not be
+obvious from reading the &lt;a href=&#34;https://golang.org/pkg/io/&#34;&gt;io documentation&lt;/a&gt; and some
+other things that just make sense in the majority of implementations. Therefore
+this article tries to collect some of those &lt;em&gt;best practices&lt;/em&gt; (if there is such a
+thing).&lt;/p&gt;
+
+&lt;p&gt;We assume you already have a bit of experience in using the &lt;code&gt;io&lt;/code&gt; package and
+it&amp;rsquo;s interfaces, please refer to the documentation when unclear. (Here&amp;rsquo;s)[TODO]
+also a nice and gentle introduction you might want to read first. I try to
+show some code where I feel it&amp;rsquo;s necessary, but the end of the article links
+to a variety of &lt;code&gt;io.Reader&lt;/code&gt; and &lt;code&gt;io.Writer&lt;/code&gt; you might want look into
+if you&amp;rsquo;re a &lt;em&gt;gimme the code!&lt;/em&gt;-kind of person.&lt;/p&gt;
+
+&lt;p&gt;Just as a reminder, those are the &lt;a href=&#34;https://golang.org/pkg/io/&#34;&gt;interface definitions from
+io&lt;/a&gt; we&amp;rsquo;re talking of:&lt;/p&gt;
+
+&lt;p&gt;&lt;div class=&#34;highlight&#34; style=&#34;background: #272822&#34;&gt;&lt;pre style=&#34;line-height: 125%&#34;&gt;&lt;span style=&#34;color: #66d9ef&#34;&gt;type&lt;/span&gt; &lt;span style=&#34;color: #a6e22e&#34;&gt;Reader&lt;/span&gt; &lt;span style=&#34;color: #66d9ef&#34;&gt;interface&lt;/span&gt; &lt;span style=&#34;color: #f8f8f2&#34;&gt;{&lt;/span&gt;
+    &lt;span style=&#34;color: #a6e22e&#34;&gt;Read&lt;/span&gt;&lt;span style=&#34;color: #f8f8f2&#34;&gt;(&lt;/span&gt;&lt;span style=&#34;color: #a6e22e&#34;&gt;p&lt;/span&gt; &lt;span style=&#34;color: #f8f8f2&#34;&gt;[]&lt;/span&gt;&lt;span style=&#34;color: #66d9ef&#34;&gt;byte&lt;/span&gt;&lt;span style=&#34;color: #f8f8f2&#34;&gt;)&lt;/span&gt; &lt;span style=&#34;color: #f8f8f2&#34;&gt;(&lt;/span&gt;&lt;span style=&#34;color: #66d9ef&#34;&gt;int&lt;/span&gt;&lt;span style=&#34;color: #f8f8f2&#34;&gt;,&lt;/span&gt; &lt;span style=&#34;color: #66d9ef&#34;&gt;error&lt;/span&gt;&lt;span style=&#34;color: #f8f8f2&#34;&gt;)&lt;/span&gt;
+&lt;span style=&#34;color: #f8f8f2&#34;&gt;}&lt;/span&gt;
+
+&lt;span style=&#34;color: #66d9ef&#34;&gt;type&lt;/span&gt; &lt;span style=&#34;color: #a6e22e&#34;&gt;Writer&lt;/span&gt; &lt;span style=&#34;color: #66d9ef&#34;&gt;interface&lt;/span&gt; &lt;span style=&#34;color: #f8f8f2&#34;&gt;{&lt;/span&gt;
+    &lt;span style=&#34;color: #a6e22e&#34;&gt;Write&lt;/span&gt;&lt;span style=&#34;color: #f8f8f2&#34;&gt;(&lt;/span&gt;&lt;span style=&#34;color: #a6e22e&#34;&gt;p&lt;/span&gt; &lt;span style=&#34;color: #f8f8f2&#34;&gt;[]&lt;/span&gt;&lt;span style=&#34;color: #66d9ef&#34;&gt;byte&lt;/span&gt;&lt;span style=&#34;color: #f8f8f2&#34;&gt;)&lt;/span&gt; &lt;span style=&#34;color: #f8f8f2&#34;&gt;(&lt;/span&gt;&lt;span style=&#34;color: #66d9ef&#34;&gt;int&lt;/span&gt;&lt;span style=&#34;color: #f8f8f2&#34;&gt;,&lt;/span&gt; &lt;span style=&#34;color: #66d9ef&#34;&gt;error&lt;/span&gt;&lt;span style=&#34;color: #f8f8f2&#34;&gt;)&lt;/span&gt;
+&lt;span style=&#34;color: #f8f8f2&#34;&gt;}&lt;/span&gt;
+
+&lt;span style=&#34;color: #66d9ef&#34;&gt;type&lt;/span&gt; &lt;span style=&#34;color: #a6e22e&#34;&gt;Seeker&lt;/span&gt; &lt;span style=&#34;color: #66d9ef&#34;&gt;interface&lt;/span&gt; &lt;span style=&#34;color: #f8f8f2&#34;&gt;{&lt;/span&gt;
+    &lt;span style=&#34;color: #a6e22e&#34;&gt;Seek&lt;/span&gt;&lt;span style=&#34;color: #f8f8f2&#34;&gt;(&lt;/span&gt;&lt;span style=&#34;color: #a6e22e&#34;&gt;off&lt;/span&gt; &lt;span style=&#34;color: #66d9ef&#34;&gt;int64&lt;/span&gt;&lt;span style=&#34;color: #f8f8f2&#34;&gt;,&lt;/span&gt; &lt;span style=&#34;color: #a6e22e&#34;&gt;whence&lt;/span&gt; &lt;span style=&#34;color: #66d9ef&#34;&gt;int&lt;/span&gt;&lt;span style=&#34;color: #f8f8f2&#34;&gt;)&lt;/span&gt; &lt;span style=&#34;color: #f8f8f2&#34;&gt;(&lt;/span&gt;&lt;span style=&#34;color: #66d9ef&#34;&gt;int64&lt;/span&gt;&lt;span style=&#34;color: #f8f8f2&#34;&gt;,&lt;/span&gt; &lt;span style=&#34;color: #66d9ef&#34;&gt;error&lt;/span&gt;&lt;span style=&#34;color: #f8f8f2&#34;&gt;)&lt;/span&gt;
+&lt;span style=&#34;color: #f8f8f2&#34;&gt;}&lt;/span&gt;
+
+&lt;span style=&#34;color: #66d9ef&#34;&gt;type&lt;/span&gt; &lt;span style=&#34;color: #a6e22e&#34;&gt;Closer&lt;/span&gt;  &lt;span style=&#34;color: #66d9ef&#34;&gt;interface&lt;/span&gt; &lt;span style=&#34;color: #f8f8f2&#34;&gt;{&lt;/span&gt;
+    &lt;span style=&#34;color: #a6e22e&#34;&gt;Close&lt;/span&gt;&lt;span style=&#34;color: #f8f8f2&#34;&gt;()&lt;/span&gt; &lt;span style=&#34;color: #66d9ef&#34;&gt;error&lt;/span&gt;
+&lt;span style=&#34;color: #f8f8f2&#34;&gt;}&lt;/span&gt;
+&lt;/pre&gt;&lt;/div&gt;
+&lt;/p&gt;
+
+&lt;p&gt;You might notice that there is a bit more to these interfaces, than
+you might expect from a quick glance.&lt;/p&gt;
+
+&lt;h2 id=&#34;how-much-to-read-write-and-return:1f9b02d070b8cc71a61fea0c5ae37919&#34;&gt;How much to read/write and return?&lt;/h2&gt;
+
+&lt;p&gt;There is a bit of confusion on what byte count to return when &lt;code&gt;Read/Write&lt;/code&gt; is
+called. For &lt;code&gt;Read()&lt;/code&gt; it&amp;rsquo;s relatively straightforward: Just return the offset
+where you stopped writing to the provided buffer &lt;code&gt;p&lt;/code&gt;.&lt;/p&gt;
+
+&lt;p&gt;Some people however get confused when implementing &lt;code&gt;Write()&lt;/code&gt;: It&amp;rsquo;s not the
+number of bytes you&amp;rsquo;ve actually written to some underlying layer. It&amp;rsquo;s the
+number of bytes you used from &lt;code&gt;p&lt;/code&gt; to write to the underlying stream.  The term
+&amp;ldquo;used&amp;rdquo; means  that you might have cached the input, wrote it directly or
+else wise processed or ignored it. And that number should be the whole length of &lt;code&gt;p&lt;/code&gt;.
+Actually I find myself to return this frequently:&lt;/p&gt;
+
+&lt;p&gt;&lt;div class=&#34;highlight&#34; style=&#34;background: #272822&#34;&gt;&lt;pre style=&#34;line-height: 125%&#34;&gt;&lt;span style=&#34;color: #66d9ef&#34;&gt;func&lt;/span&gt; &lt;span style=&#34;color: #f8f8f2&#34;&gt;(&lt;/span&gt;&lt;span style=&#34;color: #a6e22e&#34;&gt;x&lt;/span&gt; &lt;span style=&#34;color: #f92672&#34;&gt;*&lt;/span&gt;&lt;span style=&#34;color: #a6e22e&#34;&gt;X&lt;/span&gt;&lt;span style=&#34;color: #f8f8f2&#34;&gt;)&lt;/span&gt; &lt;span style=&#34;color: #a6e22e&#34;&gt;Write&lt;/span&gt;&lt;span style=&#34;color: #f8f8f2&#34;&gt;(&lt;/span&gt;&lt;span style=&#34;color: #a6e22e&#34;&gt;p&lt;/span&gt; &lt;span style=&#34;color: #f8f8f2&#34;&gt;[]&lt;/span&gt;&lt;span style=&#34;color: #66d9ef&#34;&gt;byte&lt;/span&gt;&lt;span style=&#34;color: #f8f8f2&#34;&gt;)&lt;/span&gt; &lt;span style=&#34;color: #f8f8f2&#34;&gt;(&lt;/span&gt;&lt;span style=&#34;color: #66d9ef&#34;&gt;int&lt;/span&gt;&lt;span style=&#34;color: #f8f8f2&#34;&gt;,&lt;/span&gt; &lt;span style=&#34;color: #66d9ef&#34;&gt;error&lt;/span&gt;&lt;span style=&#34;color: #f8f8f2&#34;&gt;)&lt;/span&gt; &lt;span style=&#34;color: #f8f8f2&#34;&gt;{&lt;/span&gt;
+    &lt;span style=&#34;color: #75715e&#34;&gt;// Do something with p: ignore, cache, duplicate or whatever.&lt;/span&gt;
+    &lt;span style=&#34;color: #66d9ef&#34;&gt;return&lt;/span&gt; &lt;span style=&#34;color: #f8f8f2&#34;&gt;len(&lt;/span&gt;&lt;span style=&#34;color: #a6e22e&#34;&gt;p&lt;/span&gt;&lt;span style=&#34;color: #f8f8f2&#34;&gt;),&lt;/span&gt; &lt;span style=&#34;color: #66d9ef&#34;&gt;nil&lt;/span&gt;
+&lt;span style=&#34;color: #f8f8f2&#34;&gt;}&lt;/span&gt;
+&lt;/pre&gt;&lt;/div&gt;
+&lt;/p&gt;
+
+&lt;p&gt;Why is returning the correct byte count important? For a lot of reasons.  One
+reason being &lt;code&gt;io.Copy()&lt;/code&gt;. If you write less than expected (and &lt;code&gt;Copy()&lt;/code&gt;
+expects the whole buffer &lt;code&gt;p&lt;/code&gt;) then &lt;a href=&#34;https://golang.org/src/io/io.go?s=12235:12295#L391&#34;&gt;it will
+bitch&lt;/a&gt; at you with a
+&lt;code&gt;ErrShortWrite&lt;/code&gt;.&lt;/p&gt;
+
+&lt;p&gt;As a general rule of thumb you should always strive to read and write every byte
+you get your hands on, i.e. always fill the buffer on &lt;code&gt;Read&lt;/code&gt; as much as
+possible and &lt;code&gt;Write&lt;/code&gt; everything you get you get passed (or at least say so).
+This makes the life of the caller easier: If he provides a buffer with 4096
+byte, then he can rely on you that you fill with all the data you have, or will
+return &lt;code&gt;io.EOF&lt;/code&gt; and the number of leftover bytes.&lt;/p&gt;
+
+&lt;p&gt;Honestly enough, this might make some implementations a bit harder.  But when in
+question, do the work once on your side, otherwise the caller might give you a
+surprise visit at night to &lt;code&gt;Read()&lt;/code&gt; your blood.&lt;/p&gt;
+
+&lt;h2 id=&#34;copying-and-chunking-data:1f9b02d070b8cc71a61fea0c5ae37919&#34;&gt;Copying and chunking data&lt;/h2&gt;
+
+&lt;p&gt;This should be obvious, but in one case I forgot to do that and spend a few
+hours debugging: you have to copy the data when using &lt;code&gt;io.Writer&lt;/code&gt;. You cannot
+rely on the data to be valid after the end of &lt;code&gt;Write()&lt;/code&gt;. You can especially
+not just store &lt;code&gt;p&lt;/code&gt; for processing it later.&lt;/p&gt;
+
+&lt;p&gt;Sometimes you&amp;rsquo;re gonna implement a reader that has to chunk it&amp;rsquo;s underlying
+data. Example: Suppose you&amp;rsquo;re building a reader/writer with compression support.
+The underlying data stream is usually chunked into blocks that need to be read
+and written as a whole. However the caller usually doesn&amp;rsquo;t care and wants as
+little as one byte, 2.37 of your chunks or any arbitrary number.
+This in turn means that you need to read the whole chunk into an internal
+buffer and only pass the requested portion to the outside, or in case of the
+writer, buffer the input until it&amp;rsquo;s big enough for one block.
+Go comes with a data type that&amp;rsquo;s useful for this: &lt;code&gt;bytes.Buffer&lt;/code&gt;:&lt;/p&gt;
+
+&lt;p&gt;&lt;div class=&#34;highlight&#34; style=&#34;background: #272822&#34;&gt;&lt;pre style=&#34;line-height: 125%&#34;&gt;&lt;span style=&#34;color: #75715e&#34;&gt;// Example chunking Read() with a internal buffer called `backlog`.&lt;/span&gt;
+&lt;span style=&#34;color: #66d9ef&#34;&gt;func&lt;/span&gt; &lt;span style=&#34;color: #f8f8f2&#34;&gt;(&lt;/span&gt;&lt;span style=&#34;color: #a6e22e&#34;&gt;r&lt;/span&gt; &lt;span style=&#34;color: #f92672&#34;&gt;*&lt;/span&gt;&lt;span style=&#34;color: #a6e22e&#34;&gt;Reader&lt;/span&gt;&lt;span style=&#34;color: #f8f8f2&#34;&gt;)&lt;/span&gt; &lt;span style=&#34;color: #a6e22e&#34;&gt;Read&lt;/span&gt;&lt;span style=&#34;color: #f8f8f2&#34;&gt;(&lt;/span&gt;&lt;span style=&#34;color: #a6e22e&#34;&gt;dest&lt;/span&gt; &lt;span style=&#34;color: #f8f8f2&#34;&gt;[]&lt;/span&gt;&lt;span style=&#34;color: #66d9ef&#34;&gt;byte&lt;/span&gt;&lt;span style=&#34;color: #f8f8f2&#34;&gt;)&lt;/span&gt; &lt;span style=&#34;color: #f8f8f2&#34;&gt;(&lt;/span&gt;&lt;span style=&#34;color: #66d9ef&#34;&gt;int&lt;/span&gt;&lt;span style=&#34;color: #f8f8f2&#34;&gt;,&lt;/span&gt; &lt;span style=&#34;color: #66d9ef&#34;&gt;error&lt;/span&gt;&lt;span style=&#34;color: #f8f8f2&#34;&gt;)&lt;/span&gt; &lt;span style=&#34;color: #f8f8f2&#34;&gt;{&lt;/span&gt;
+	&lt;span style=&#34;color: #a6e22e&#34;&gt;readBytes&lt;/span&gt; &lt;span style=&#34;color: #f92672&#34;&gt;:=&lt;/span&gt; &lt;span style=&#34;color: #ae81ff&#34;&gt;0&lt;/span&gt;
+
+	&lt;span style=&#34;color: #66d9ef&#34;&gt;for&lt;/span&gt; &lt;span style=&#34;color: #a6e22e&#34;&gt;readBytes&lt;/span&gt; &lt;span style=&#34;color: #f8f8f2&#34;&gt;&amp;lt;&lt;/span&gt; &lt;span style=&#34;color: #f8f8f2&#34;&gt;len(&lt;/span&gt;&lt;span style=&#34;color: #a6e22e&#34;&gt;dest&lt;/span&gt;&lt;span style=&#34;color: #f8f8f2&#34;&gt;)&lt;/span&gt; &lt;span style=&#34;color: #f8f8f2&#34;&gt;{&lt;/span&gt;
+		&lt;span style=&#34;color: #66d9ef&#34;&gt;if&lt;/span&gt; &lt;span style=&#34;color: #a6e22e&#34;&gt;r&lt;/span&gt;&lt;span style=&#34;color: #f8f8f2&#34;&gt;.&lt;/span&gt;&lt;span style=&#34;color: #a6e22e&#34;&gt;backlog&lt;/span&gt;&lt;span style=&#34;color: #f8f8f2&#34;&gt;.&lt;/span&gt;&lt;span style=&#34;color: #a6e22e&#34;&gt;Len&lt;/span&gt;&lt;span style=&#34;color: #f8f8f2&#34;&gt;()&lt;/span&gt; &lt;span style=&#34;color: #f92672&#34;&gt;==&lt;/span&gt; &lt;span style=&#34;color: #ae81ff&#34;&gt;0&lt;/span&gt; &lt;span style=&#34;color: #f8f8f2&#34;&gt;{&lt;/span&gt;
+			&lt;span style=&#34;color: #66d9ef&#34;&gt;if&lt;/span&gt; &lt;span style=&#34;color: #a6e22e&#34;&gt;_&lt;/span&gt;&lt;span style=&#34;color: #f8f8f2&#34;&gt;,&lt;/span&gt; &lt;span style=&#34;color: #a6e22e&#34;&gt;err&lt;/span&gt; &lt;span style=&#34;color: #f92672&#34;&gt;:=&lt;/span&gt; &lt;span style=&#34;color: #a6e22e&#34;&gt;r&lt;/span&gt;&lt;span style=&#34;color: #f8f8f2&#34;&gt;.&lt;/span&gt;&lt;span style=&#34;color: #a6e22e&#34;&gt;readBlock&lt;/span&gt;&lt;span style=&#34;color: #f8f8f2&#34;&gt;();&lt;/span&gt; &lt;span style=&#34;color: #a6e22e&#34;&gt;err&lt;/span&gt; &lt;span style=&#34;color: #f92672&#34;&gt;!=&lt;/span&gt; &lt;span style=&#34;color: #66d9ef&#34;&gt;nil&lt;/span&gt; &lt;span style=&#34;color: #f8f8f2&#34;&gt;{&lt;/span&gt;
+				&lt;span style=&#34;color: #66d9ef&#34;&gt;return&lt;/span&gt; &lt;span style=&#34;color: #a6e22e&#34;&gt;readBytes&lt;/span&gt;&lt;span style=&#34;color: #f8f8f2&#34;&gt;,&lt;/span&gt; &lt;span style=&#34;color: #a6e22e&#34;&gt;err&lt;/span&gt;
+			&lt;span style=&#34;color: #f8f8f2&#34;&gt;}&lt;/span&gt;
+		&lt;span style=&#34;color: #f8f8f2&#34;&gt;}&lt;/span&gt;
+
+		&lt;span style=&#34;color: #a6e22e&#34;&gt;n&lt;/span&gt;&lt;span style=&#34;color: #f8f8f2&#34;&gt;,&lt;/span&gt; &lt;span style=&#34;color: #a6e22e&#34;&gt;_&lt;/span&gt; &lt;span style=&#34;color: #f92672&#34;&gt;:=&lt;/span&gt; &lt;span style=&#34;color: #a6e22e&#34;&gt;r&lt;/span&gt;&lt;span style=&#34;color: #f8f8f2&#34;&gt;.&lt;/span&gt;&lt;span style=&#34;color: #a6e22e&#34;&gt;backlog&lt;/span&gt;&lt;span style=&#34;color: #f8f8f2&#34;&gt;.&lt;/span&gt;&lt;span style=&#34;color: #a6e22e&#34;&gt;Read&lt;/span&gt;&lt;span style=&#34;color: #f8f8f2&#34;&gt;(&lt;/span&gt;&lt;span style=&#34;color: #a6e22e&#34;&gt;dest&lt;/span&gt;&lt;span style=&#34;color: #f8f8f2&#34;&gt;[&lt;/span&gt;&lt;span style=&#34;color: #a6e22e&#34;&gt;readBytes&lt;/span&gt;&lt;span style=&#34;color: #f8f8f2&#34;&gt;:])&lt;/span&gt;
+		&lt;span style=&#34;color: #a6e22e&#34;&gt;readBytes&lt;/span&gt; &lt;span style=&#34;color: #f92672&#34;&gt;+=&lt;/span&gt; &lt;span style=&#34;color: #a6e22e&#34;&gt;n&lt;/span&gt;
+	&lt;span style=&#34;color: #f8f8f2&#34;&gt;}&lt;/span&gt;
+
+	&lt;span style=&#34;color: #66d9ef&#34;&gt;return&lt;/span&gt; &lt;span style=&#34;color: #a6e22e&#34;&gt;readBytes&lt;/span&gt;&lt;span style=&#34;color: #f8f8f2&#34;&gt;,&lt;/span&gt; &lt;span style=&#34;color: #66d9ef&#34;&gt;nil&lt;/span&gt;
+&lt;span style=&#34;color: #f8f8f2&#34;&gt;}&lt;/span&gt;
+&lt;/pre&gt;&lt;/div&gt;
+&lt;/p&gt;
+
+&lt;p&gt;More performance might be doable by implementing a true, &lt;a href=&#34;https://github.com/glycerine/rbuf&#34;&gt;fixed size ring
+buffer&lt;/a&gt;.  And sometimes even more convenience
+can be achieved by using &lt;a href=&#34;https://golang.org/pkg/bufio/#NewReaderSize&#34;&gt;bufio&lt;/a&gt;.&lt;/p&gt;
+
+&lt;p&gt;That said, ,,zero-copying&amp;rdquo; is not directly supported by the concept of &lt;code&gt;Write()
+/ Read()&lt;/code&gt;, but you can use the  &lt;code&gt;io.WriteTo&lt;/code&gt; and &lt;code&gt;io.ReadFrom&lt;/code&gt; interfaces
+for this.  &lt;code&gt;io.Copy()&lt;/code&gt; will automatically use them if present.&lt;/p&gt;
+
+&lt;p&gt;TODO: WriteTo/ReadFrom == zero copy?&lt;/p&gt;
+
+&lt;h2 id=&#34;stacking-writers-and-readers:1f9b02d070b8cc71a61fea0c5ae37919&#34;&gt;Stacking writers and readers&lt;/h2&gt;
+
+&lt;p&gt;A popular use of &lt;code&gt;io.Reader/Writer&lt;/code&gt; is stacking them up, making one
+transformation per layer. Example: &lt;code&gt;brig&lt;/code&gt; uses this extensively by providing a
+&lt;code&gt;Overlay&lt;/code&gt;-writer over a &lt;code&gt;Compression&lt;/code&gt;-writer over a &lt;code&gt;Encryption&lt;/code&gt;-writer
+that in turns feeds it&amp;rsquo;s data to a &lt;code&gt;DAGWriter&lt;/code&gt; provided by &lt;code&gt;ipfs&lt;/code&gt;. Some
+&lt;code&gt;bytes.Buffer&lt;/code&gt; and &lt;code&gt;bufio.Writer&lt;/code&gt; are sandwiched in there too.
+The read side does almost the same thing, but mirrored.&lt;/p&gt;
+
+&lt;p&gt;The semantics are relatively clear here for &lt;code&gt;Read() / Write() / Seek()&lt;/code&gt; but
+&lt;code&gt;Close()&lt;/code&gt; is the odd kid in the class. Is &lt;code&gt;Close()&lt;/code&gt; on the top-layer supposed to
+close only itself or also everything below? This might not what you might
+expect though, although it would be somewhat convenient, since you might not
+always have access to all layers.&lt;/p&gt;
+
+&lt;p&gt;My general advice is: &lt;em&gt;Close everything separately.&lt;/em&gt;&lt;/p&gt;
+
+&lt;p&gt;Some people won&amp;rsquo;t listen to advice though and might try something like this in
+their implementation:&lt;/p&gt;
+
+&lt;p&gt;&lt;div class=&#34;highlight&#34; style=&#34;background: #272822&#34;&gt;&lt;pre style=&#34;line-height: 125%&#34;&gt;&lt;span style=&#34;color: #66d9ef&#34;&gt;func&lt;/span&gt; &lt;span style=&#34;color: #f8f8f2&#34;&gt;(&lt;/span&gt;&lt;span style=&#34;color: #a6e22e&#34;&gt;r&lt;/span&gt; &lt;span style=&#34;color: #f92672&#34;&gt;*&lt;/span&gt;&lt;span style=&#34;color: #a6e22e&#34;&gt;Reader&lt;/span&gt;&lt;span style=&#34;color: #f8f8f2&#34;&gt;)&lt;/span&gt; &lt;span style=&#34;color: #a6e22e&#34;&gt;Close&lt;/span&gt;&lt;span style=&#34;color: #f8f8f2&#34;&gt;()&lt;/span&gt; &lt;span style=&#34;color: #66d9ef&#34;&gt;error&lt;/span&gt; &lt;span style=&#34;color: #f8f8f2&#34;&gt;{&lt;/span&gt;
+    &lt;span style=&#34;color: #75715e&#34;&gt;// Try to close the underlying reader if supported:&lt;/span&gt;
+    &lt;span style=&#34;color: #a6e22e&#34;&gt;closer&lt;/span&gt;&lt;span style=&#34;color: #f8f8f2&#34;&gt;,&lt;/span&gt; &lt;span style=&#34;color: #a6e22e&#34;&gt;ok&lt;/span&gt; &lt;span style=&#34;color: #f92672&#34;&gt;:=&lt;/span&gt; &lt;span style=&#34;color: #a6e22e&#34;&gt;r&lt;/span&gt;&lt;span style=&#34;color: #f8f8f2&#34;&gt;.&lt;/span&gt;&lt;span style=&#34;color: #a6e22e&#34;&gt;rawR&lt;/span&gt;&lt;span style=&#34;color: #f8f8f2&#34;&gt;.(&lt;/span&gt;&lt;span style=&#34;color: #a6e22e&#34;&gt;io&lt;/span&gt;&lt;span style=&#34;color: #f8f8f2&#34;&gt;.&lt;/span&gt;&lt;span style=&#34;color: #a6e22e&#34;&gt;Closer&lt;/span&gt;&lt;span style=&#34;color: #f8f8f2&#34;&gt;)&lt;/span&gt;
+    &lt;span style=&#34;color: #66d9ef&#34;&gt;if&lt;/span&gt; &lt;span style=&#34;color: #a6e22e&#34;&gt;ok&lt;/span&gt; &lt;span style=&#34;color: #f8f8f2&#34;&gt;{&lt;/span&gt;
+        &lt;span style=&#34;color: #66d9ef&#34;&gt;return&lt;/span&gt; &lt;span style=&#34;color: #a6e22e&#34;&gt;closer&lt;/span&gt;&lt;span style=&#34;color: #f8f8f2&#34;&gt;.&lt;/span&gt;&lt;span style=&#34;color: #a6e22e&#34;&gt;Close&lt;/span&gt;&lt;span style=&#34;color: #f8f8f2&#34;&gt;()&lt;/span&gt;
+    &lt;span style=&#34;color: #f8f8f2&#34;&gt;}&lt;/span&gt;
+
+    &lt;span style=&#34;color: #66d9ef&#34;&gt;return&lt;/span&gt; &lt;span style=&#34;color: #66d9ef&#34;&gt;nil&lt;/span&gt;
+&lt;span style=&#34;color: #f8f8f2&#34;&gt;}&lt;/span&gt;
+&lt;/pre&gt;&lt;/div&gt;
+&lt;/p&gt;
+
+&lt;p&gt;This has some drawbacks. The most obvious one is that all your readers need to
+implement that pattern. Even those from some libraries you don&amp;rsquo;t control.
+Also, even if you have control over all of them, it&amp;rsquo;s enough to insert
+a normal &lt;code&gt;io.Reader&lt;/code&gt; (one without being a &lt;code&gt;io.Closer&lt;/code&gt;) into the chain in
+order to break the close-chain. &lt;em&gt;Please don&amp;rsquo;t do this.&lt;/em&gt;&lt;/p&gt;
+
+&lt;p&gt;A better approach might be implementing and maintaining a separate &lt;code&gt;CloseStack&lt;/code&gt;:&lt;/p&gt;
+
+&lt;p&gt;&lt;div class=&#34;highlight&#34; style=&#34;background: #272822&#34;&gt;&lt;pre style=&#34;line-height: 125%&#34;&gt;&lt;span style=&#34;color: #66d9ef&#34;&gt;type&lt;/span&gt; &lt;span style=&#34;color: #a6e22e&#34;&gt;CloseStack&lt;/span&gt; &lt;span style=&#34;color: #66d9ef&#34;&gt;struct&lt;/span&gt; &lt;span style=&#34;color: #f8f8f2&#34;&gt;{&lt;/span&gt;
+	&lt;span style=&#34;color: #a6e22e&#34;&gt;stack&lt;/span&gt; &lt;span style=&#34;color: #f8f8f2&#34;&gt;[]&lt;/span&gt;&lt;span style=&#34;color: #a6e22e&#34;&gt;io&lt;/span&gt;&lt;span style=&#34;color: #f8f8f2&#34;&gt;.&lt;/span&gt;&lt;span style=&#34;color: #a6e22e&#34;&gt;Closer&lt;/span&gt;
+&lt;span style=&#34;color: #f8f8f2&#34;&gt;}&lt;/span&gt;
+
+&lt;span style=&#34;color: #66d9ef&#34;&gt;func&lt;/span&gt; &lt;span style=&#34;color: #f8f8f2&#34;&gt;(&lt;/span&gt;&lt;span style=&#34;color: #a6e22e&#34;&gt;s&lt;/span&gt; &lt;span style=&#34;color: #f92672&#34;&gt;*&lt;/span&gt;&lt;span style=&#34;color: #a6e22e&#34;&gt;CloseStack&lt;/span&gt;&lt;span style=&#34;color: #f8f8f2&#34;&gt;)&lt;/span&gt; &lt;span style=&#34;color: #a6e22e&#34;&gt;Push&lt;/span&gt;&lt;span style=&#34;color: #f8f8f2&#34;&gt;(&lt;/span&gt;&lt;span style=&#34;color: #a6e22e&#34;&gt;cls&lt;/span&gt; &lt;span style=&#34;color: #a6e22e&#34;&gt;io&lt;/span&gt;&lt;span style=&#34;color: #f8f8f2&#34;&gt;.&lt;/span&gt;&lt;span style=&#34;color: #a6e22e&#34;&gt;Closer&lt;/span&gt;&lt;span style=&#34;color: #f8f8f2&#34;&gt;)&lt;/span&gt; &lt;span style=&#34;color: #f8f8f2&#34;&gt;{&lt;/span&gt;
+	&lt;span style=&#34;color: #a6e22e&#34;&gt;s&lt;/span&gt;&lt;span style=&#34;color: #f8f8f2&#34;&gt;.&lt;/span&gt;&lt;span style=&#34;color: #a6e22e&#34;&gt;stack&lt;/span&gt; &lt;span style=&#34;color: #f8f8f2&#34;&gt;=&lt;/span&gt; &lt;span style=&#34;color: #f8f8f2&#34;&gt;append(&lt;/span&gt;&lt;span style=&#34;color: #a6e22e&#34;&gt;s&lt;/span&gt;&lt;span style=&#34;color: #f8f8f2&#34;&gt;.&lt;/span&gt;&lt;span style=&#34;color: #a6e22e&#34;&gt;stack&lt;/span&gt;&lt;span style=&#34;color: #f8f8f2&#34;&gt;,&lt;/span&gt; &lt;span style=&#34;color: #a6e22e&#34;&gt;cls&lt;/span&gt;&lt;span style=&#34;color: #f8f8f2&#34;&gt;)&lt;/span&gt;
+&lt;span style=&#34;color: #f8f8f2&#34;&gt;}&lt;/span&gt;
+
+&lt;span style=&#34;color: #66d9ef&#34;&gt;func&lt;/span&gt; &lt;span style=&#34;color: #f8f8f2&#34;&gt;(&lt;/span&gt;&lt;span style=&#34;color: #a6e22e&#34;&gt;s&lt;/span&gt; &lt;span style=&#34;color: #f92672&#34;&gt;*&lt;/span&gt;&lt;span style=&#34;color: #a6e22e&#34;&gt;CloseStack&lt;/span&gt;&lt;span style=&#34;color: #f8f8f2&#34;&gt;)&lt;/span&gt; &lt;span style=&#34;color: #a6e22e&#34;&gt;Close&lt;/span&gt;&lt;span style=&#34;color: #f8f8f2&#34;&gt;()&lt;/span&gt; &lt;span style=&#34;color: #66d9ef&#34;&gt;error&lt;/span&gt; &lt;span style=&#34;color: #f8f8f2&#34;&gt;{&lt;/span&gt;
+    &lt;span style=&#34;color: #66d9ef&#34;&gt;var&lt;/span&gt; &lt;span style=&#34;color: #a6e22e&#34;&gt;err&lt;/span&gt; &lt;span style=&#34;color: #66d9ef&#34;&gt;error&lt;/span&gt;
+    &lt;span style=&#34;color: #66d9ef&#34;&gt;for&lt;/span&gt; &lt;span style=&#34;color: #a6e22e&#34;&gt;i&lt;/span&gt; &lt;span style=&#34;color: #f92672&#34;&gt;:=&lt;/span&gt; &lt;span style=&#34;color: #ae81ff&#34;&gt;0&lt;/span&gt;&lt;span style=&#34;color: #f8f8f2&#34;&gt;;&lt;/span&gt; &lt;span style=&#34;color: #a6e22e&#34;&gt;i&lt;/span&gt; &lt;span style=&#34;color: #f8f8f2&#34;&gt;&amp;lt;&lt;/span&gt; &lt;span style=&#34;color: #f8f8f2&#34;&gt;len(&lt;/span&gt;&lt;span style=&#34;color: #a6e22e&#34;&gt;s&lt;/span&gt;&lt;span style=&#34;color: #f8f8f2&#34;&gt;.&lt;/span&gt;&lt;span style=&#34;color: #a6e22e&#34;&gt;stack&lt;/span&gt;&lt;span style=&#34;color: #f8f8f2&#34;&gt;);&lt;/span&gt; &lt;span style=&#34;color: #a6e22e&#34;&gt;i&lt;/span&gt;&lt;span style=&#34;color: #f92672&#34;&gt;++&lt;/span&gt; &lt;span style=&#34;color: #f8f8f2&#34;&gt;{&lt;/span&gt;
+        &lt;span style=&#34;color: #a6e22e&#34;&gt;cl&lt;/span&gt; &lt;span style=&#34;color: #f92672&#34;&gt;:=&lt;/span&gt; &lt;span style=&#34;color: #a6e22e&#34;&gt;s&lt;/span&gt;&lt;span style=&#34;color: #f8f8f2&#34;&gt;.&lt;/span&gt;&lt;span style=&#34;color: #a6e22e&#34;&gt;stack&lt;/span&gt;&lt;span style=&#34;color: #f8f8f2&#34;&gt;[len(&lt;/span&gt;&lt;span style=&#34;color: #a6e22e&#34;&gt;s&lt;/span&gt;&lt;span style=&#34;color: #f8f8f2&#34;&gt;.&lt;/span&gt;&lt;span style=&#34;color: #a6e22e&#34;&gt;stack&lt;/span&gt;&lt;span style=&#34;color: #f8f8f2&#34;&gt;)&lt;/span&gt;&lt;span style=&#34;color: #f92672&#34;&gt;-&lt;/span&gt;&lt;span style=&#34;color: #a6e22e&#34;&gt;i&lt;/span&gt;&lt;span style=&#34;color: #f92672&#34;&gt;-&lt;/span&gt;&lt;span style=&#34;color: #ae81ff&#34;&gt;1&lt;/span&gt;&lt;span style=&#34;color: #f8f8f2&#34;&gt;]&lt;/span&gt;
+        &lt;span style=&#34;color: #66d9ef&#34;&gt;if&lt;/span&gt; &lt;span style=&#34;color: #a6e22e&#34;&gt;clErr&lt;/span&gt; &lt;span style=&#34;color: #f92672&#34;&gt;:=&lt;/span&gt; &lt;span style=&#34;color: #a6e22e&#34;&gt;cl&lt;/span&gt;&lt;span style=&#34;color: #f8f8f2&#34;&gt;.&lt;/span&gt;&lt;span style=&#34;color: #a6e22e&#34;&gt;Close&lt;/span&gt;&lt;span style=&#34;color: #f8f8f2&#34;&gt;();&lt;/span&gt; &lt;span style=&#34;color: #a6e22e&#34;&gt;err&lt;/span&gt; &lt;span style=&#34;color: #f92672&#34;&gt;==&lt;/span&gt; &lt;span style=&#34;color: #66d9ef&#34;&gt;nil&lt;/span&gt; &lt;span style=&#34;color: #f92672&#34;&gt;&amp;amp;&amp;amp;&lt;/span&gt; &lt;span style=&#34;color: #a6e22e&#34;&gt;clErr&lt;/span&gt; &lt;span style=&#34;color: #f92672&#34;&gt;!=&lt;/span&gt; &lt;span style=&#34;color: #66d9ef&#34;&gt;nil&lt;/span&gt; &lt;span style=&#34;color: #f8f8f2&#34;&gt;{&lt;/span&gt;
+            &lt;span style=&#34;color: #75715e&#34;&gt;// Remember first error:&lt;/span&gt;
+            &lt;span style=&#34;color: #a6e22e&#34;&gt;err&lt;/span&gt; &lt;span style=&#34;color: #f8f8f2&#34;&gt;=&lt;/span&gt; &lt;span style=&#34;color: #a6e22e&#34;&gt;clErr&lt;/span&gt;
+        &lt;span style=&#34;color: #f8f8f2&#34;&gt;}&lt;/span&gt;
+    &lt;span style=&#34;color: #f8f8f2&#34;&gt;}&lt;/span&gt;
+
+    &lt;span style=&#34;color: #66d9ef&#34;&gt;return&lt;/span&gt; &lt;span style=&#34;color: #a6e22e&#34;&gt;err&lt;/span&gt;
+&lt;span style=&#34;color: #f8f8f2&#34;&gt;}&lt;/span&gt;
+
+&lt;span style=&#34;color: #66d9ef&#34;&gt;type&lt;/span&gt; &lt;span style=&#34;color: #a6e22e&#34;&gt;dummyCloser&lt;/span&gt; &lt;span style=&#34;color: #66d9ef&#34;&gt;struct&lt;/span&gt; &lt;span style=&#34;color: #f8f8f2&#34;&gt;{&lt;/span&gt; &lt;span style=&#34;color: #a6e22e&#34;&gt;id&lt;/span&gt; &lt;span style=&#34;color: #66d9ef&#34;&gt;int&lt;/span&gt; &lt;span style=&#34;color: #f8f8f2&#34;&gt;}&lt;/span&gt;
+
+&lt;span style=&#34;color: #66d9ef&#34;&gt;func&lt;/span&gt; &lt;span style=&#34;color: #f8f8f2&#34;&gt;(&lt;/span&gt;&lt;span style=&#34;color: #a6e22e&#34;&gt;d&lt;/span&gt; &lt;span style=&#34;color: #a6e22e&#34;&gt;dummyCloser&lt;/span&gt;&lt;span style=&#34;color: #f8f8f2&#34;&gt;)&lt;/span&gt; &lt;span style=&#34;color: #a6e22e&#34;&gt;Close&lt;/span&gt;&lt;span style=&#34;color: #f8f8f2&#34;&gt;()&lt;/span&gt; &lt;span style=&#34;color: #66d9ef&#34;&gt;error&lt;/span&gt; &lt;span style=&#34;color: #f8f8f2&#34;&gt;{&lt;/span&gt;
+	&lt;span style=&#34;color: #a6e22e&#34;&gt;fmt&lt;/span&gt;&lt;span style=&#34;color: #f8f8f2&#34;&gt;.&lt;/span&gt;&lt;span style=&#34;color: #a6e22e&#34;&gt;Printf&lt;/span&gt;&lt;span style=&#34;color: #f8f8f2&#34;&gt;(&lt;/span&gt;&lt;span style=&#34;color: #e6db74&#34;&gt;&amp;quot;Closing %d\n&amp;quot;&lt;/span&gt;&lt;span style=&#34;color: #f8f8f2&#34;&gt;,&lt;/span&gt; &lt;span style=&#34;color: #a6e22e&#34;&gt;d&lt;/span&gt;&lt;span style=&#34;color: #f8f8f2&#34;&gt;.&lt;/span&gt;&lt;span style=&#34;color: #a6e22e&#34;&gt;id&lt;/span&gt;&lt;span style=&#34;color: #f8f8f2&#34;&gt;)&lt;/span&gt;
+	&lt;span style=&#34;color: #66d9ef&#34;&gt;return&lt;/span&gt; &lt;span style=&#34;color: #66d9ef&#34;&gt;nil&lt;/span&gt;
+&lt;span style=&#34;color: #f8f8f2&#34;&gt;}&lt;/span&gt;
+
+&lt;span style=&#34;color: #66d9ef&#34;&gt;func&lt;/span&gt; &lt;span style=&#34;color: #a6e22e&#34;&gt;main&lt;/span&gt;&lt;span style=&#34;color: #f8f8f2&#34;&gt;()&lt;/span&gt; &lt;span style=&#34;color: #f8f8f2&#34;&gt;{&lt;/span&gt;
+    &lt;span style=&#34;color: #a6e22e&#34;&gt;chain&lt;/span&gt; &lt;span style=&#34;color: #f92672&#34;&gt;:=&lt;/span&gt; &lt;span style=&#34;color: #f92672&#34;&gt;&amp;amp;&lt;/span&gt;&lt;span style=&#34;color: #a6e22e&#34;&gt;CloseStack&lt;/span&gt;&lt;span style=&#34;color: #f8f8f2&#34;&gt;{}&lt;/span&gt;
+
+    &lt;span style=&#34;color: #66d9ef&#34;&gt;for&lt;/span&gt; &lt;span style=&#34;color: #a6e22e&#34;&gt;i&lt;/span&gt; &lt;span style=&#34;color: #f92672&#34;&gt;:=&lt;/span&gt; &lt;span style=&#34;color: #ae81ff&#34;&gt;0&lt;/span&gt;&lt;span style=&#34;color: #f8f8f2&#34;&gt;;&lt;/span&gt; &lt;span style=&#34;color: #a6e22e&#34;&gt;i&lt;/span&gt; &lt;span style=&#34;color: #f8f8f2&#34;&gt;&amp;lt;&lt;/span&gt; &lt;span style=&#34;color: #ae81ff&#34;&gt;4&lt;/span&gt;&lt;span style=&#34;color: #f8f8f2&#34;&gt;;&lt;/span&gt; &lt;span style=&#34;color: #a6e22e&#34;&gt;i&lt;/span&gt;&lt;span style=&#34;color: #f92672&#34;&gt;++&lt;/span&gt; &lt;span style=&#34;color: #f8f8f2&#34;&gt;{&lt;/span&gt;
+	    &lt;span style=&#34;color: #a6e22e&#34;&gt;chain&lt;/span&gt;&lt;span style=&#34;color: #f8f8f2&#34;&gt;.&lt;/span&gt;&lt;span style=&#34;color: #a6e22e&#34;&gt;Push&lt;/span&gt;&lt;span style=&#34;color: #f8f8f2&#34;&gt;(&lt;/span&gt;&lt;span style=&#34;color: #a6e22e&#34;&gt;dummyCloser&lt;/span&gt;&lt;span style=&#34;color: #f8f8f2&#34;&gt;{&lt;/span&gt;&lt;span style=&#34;color: #a6e22e&#34;&gt;i&lt;/span&gt; &lt;span style=&#34;color: #f92672&#34;&gt;+&lt;/span&gt; &lt;span style=&#34;color: #ae81ff&#34;&gt;1&lt;/span&gt;&lt;span style=&#34;color: #f8f8f2&#34;&gt;})&lt;/span&gt;
+    &lt;span style=&#34;color: #f8f8f2&#34;&gt;}&lt;/span&gt;
+
+    &lt;span style=&#34;color: #75715e&#34;&gt;// Prints numbers from 4 till 1. &lt;/span&gt;
+    &lt;span style=&#34;color: #a6e22e&#34;&gt;chain&lt;/span&gt;&lt;span style=&#34;color: #f8f8f2&#34;&gt;.&lt;/span&gt;&lt;span style=&#34;color: #a6e22e&#34;&gt;Close&lt;/span&gt;&lt;span style=&#34;color: #f8f8f2&#34;&gt;()&lt;/span&gt;
+&lt;span style=&#34;color: #f8f8f2&#34;&gt;}&lt;/span&gt;
+&lt;/pre&gt;&lt;/div&gt;
+&lt;/p&gt;
+
+&lt;p&gt;When stacking readers/writers with different abilities (e.g. one
+&lt;code&gt;io.ReadCloser&lt;/code&gt; over a &lt;code&gt;io.ReadSeeker&lt;/code&gt;), it&amp;rsquo;s useful to keep those abilities
+on the top layer if possible. This can be stupidly done by implementing a dummy
+method of e.g.  &lt;code&gt;Seek()&lt;/code&gt; that just calls the underlying &lt;code&gt;Seek()&lt;/code&gt;. Besides a
+little performance penalty, it introduces a tiny bit of boilerplate code.  Go&amp;rsquo;s
+&lt;a href=&#34;http://www.hydrogen18.com/blog/golang-embedding.html&#34;&gt;interface embedding&lt;/a&gt;
+makes this slightly easier:&lt;/p&gt;
+
+&lt;p&gt;&lt;div class=&#34;highlight&#34; style=&#34;background: #272822&#34;&gt;&lt;pre style=&#34;line-height: 125%&#34;&gt;&lt;span style=&#34;color: #66d9ef&#34;&gt;type&lt;/span&gt; &lt;span style=&#34;color: #a6e22e&#34;&gt;A&lt;/span&gt; &lt;span style=&#34;color: #66d9ef&#34;&gt;struct&lt;/span&gt; &lt;span style=&#34;color: #f8f8f2&#34;&gt;{&lt;/span&gt;
+	&lt;span style=&#34;color: #a6e22e&#34;&gt;io&lt;/span&gt;&lt;span style=&#34;color: #f8f8f2&#34;&gt;.&lt;/span&gt;&lt;span style=&#34;color: #a6e22e&#34;&gt;ReadSeeker&lt;/span&gt;
+&lt;span style=&#34;color: #f8f8f2&#34;&gt;}&lt;/span&gt;
+
+&lt;span style=&#34;color: #66d9ef&#34;&gt;func&lt;/span&gt; &lt;span style=&#34;color: #f8f8f2&#34;&gt;(&lt;/span&gt;&lt;span style=&#34;color: #a6e22e&#34;&gt;a&lt;/span&gt; &lt;span style=&#34;color: #f92672&#34;&gt;*&lt;/span&gt;&lt;span style=&#34;color: #a6e22e&#34;&gt;A&lt;/span&gt;&lt;span style=&#34;color: #f8f8f2&#34;&gt;)&lt;/span&gt; &lt;span style=&#34;color: #a6e22e&#34;&gt;Read&lt;/span&gt;&lt;span style=&#34;color: #f8f8f2&#34;&gt;(&lt;/span&gt;&lt;span style=&#34;color: #a6e22e&#34;&gt;buf&lt;/span&gt; &lt;span style=&#34;color: #f8f8f2&#34;&gt;[]&lt;/span&gt;&lt;span style=&#34;color: #66d9ef&#34;&gt;byte&lt;/span&gt;&lt;span style=&#34;color: #f8f8f2&#34;&gt;)&lt;/span&gt; &lt;span style=&#34;color: #f8f8f2&#34;&gt;(&lt;/span&gt;&lt;span style=&#34;color: #66d9ef&#34;&gt;int&lt;/span&gt;&lt;span style=&#34;color: #f8f8f2&#34;&gt;,&lt;/span&gt; &lt;span style=&#34;color: #66d9ef&#34;&gt;error&lt;/span&gt;&lt;span style=&#34;color: #f8f8f2&#34;&gt;)&lt;/span&gt; &lt;span style=&#34;color: #f8f8f2&#34;&gt;{&lt;/span&gt;
+	&lt;span style=&#34;color: #66d9ef&#34;&gt;return&lt;/span&gt; &lt;span style=&#34;color: #ae81ff&#34;&gt;0&lt;/span&gt;&lt;span style=&#34;color: #f8f8f2&#34;&gt;,&lt;/span&gt; &lt;span style=&#34;color: #66d9ef&#34;&gt;nil&lt;/span&gt;
+&lt;span style=&#34;color: #f8f8f2&#34;&gt;}&lt;/span&gt;
+
+&lt;span style=&#34;color: #66d9ef&#34;&gt;type&lt;/span&gt; &lt;span style=&#34;color: #a6e22e&#34;&gt;B&lt;/span&gt; &lt;span style=&#34;color: #66d9ef&#34;&gt;struct&lt;/span&gt; &lt;span style=&#34;color: #f8f8f2&#34;&gt;{&lt;/span&gt;
+	&lt;span style=&#34;color: #a6e22e&#34;&gt;io&lt;/span&gt;&lt;span style=&#34;color: #f8f8f2&#34;&gt;.&lt;/span&gt;&lt;span style=&#34;color: #a6e22e&#34;&gt;ReadSeeker&lt;/span&gt;
+	&lt;span style=&#34;color: #a6e22e&#34;&gt;io&lt;/span&gt;&lt;span style=&#34;color: #f8f8f2&#34;&gt;.&lt;/span&gt;&lt;span style=&#34;color: #a6e22e&#34;&gt;Closer&lt;/span&gt;
+&lt;span style=&#34;color: #f8f8f2&#34;&gt;}&lt;/span&gt;
+
+&lt;span style=&#34;color: #66d9ef&#34;&gt;func&lt;/span&gt; &lt;span style=&#34;color: #a6e22e&#34;&gt;main&lt;/span&gt;&lt;span style=&#34;color: #f8f8f2&#34;&gt;()&lt;/span&gt; &lt;span style=&#34;color: #f8f8f2&#34;&gt;{&lt;/span&gt;
+    &lt;span style=&#34;color: #a6e22e&#34;&gt;src&lt;/span&gt; &lt;span style=&#34;color: #f92672&#34;&gt;:=&lt;/span&gt; &lt;span style=&#34;color: #a6e22e&#34;&gt;bytes&lt;/span&gt;&lt;span style=&#34;color: #f8f8f2&#34;&gt;.&lt;/span&gt;&lt;span style=&#34;color: #a6e22e&#34;&gt;NewReader&lt;/span&gt;&lt;span style=&#34;color: #f8f8f2&#34;&gt;([]&lt;/span&gt;&lt;span style=&#34;color: #66d9ef&#34;&gt;byte&lt;/span&gt;&lt;span style=&#34;color: #f8f8f2&#34;&gt;{})&lt;/span&gt;
+	&lt;span style=&#34;color: #a6e22e&#34;&gt;low&lt;/span&gt; &lt;span style=&#34;color: #f92672&#34;&gt;:=&lt;/span&gt; &lt;span style=&#34;color: #f92672&#34;&gt;&amp;amp;&lt;/span&gt;&lt;span style=&#34;color: #a6e22e&#34;&gt;A&lt;/span&gt;&lt;span style=&#34;color: #f8f8f2&#34;&gt;{&lt;/span&gt;&lt;span style=&#34;color: #a6e22e&#34;&gt;src&lt;/span&gt;&lt;span style=&#34;color: #f8f8f2&#34;&gt;}&lt;/span&gt;
+	&lt;span style=&#34;color: #a6e22e&#34;&gt;top&lt;/span&gt; &lt;span style=&#34;color: #f92672&#34;&gt;:=&lt;/span&gt; &lt;span style=&#34;color: #f92672&#34;&gt;&amp;amp;&lt;/span&gt;&lt;span style=&#34;color: #a6e22e&#34;&gt;B&lt;/span&gt;&lt;span style=&#34;color: #f8f8f2&#34;&gt;{&lt;/span&gt;&lt;span style=&#34;color: #a6e22e&#34;&gt;low&lt;/span&gt;&lt;span style=&#34;color: #f8f8f2&#34;&gt;,&lt;/span&gt; &lt;span style=&#34;color: #a6e22e&#34;&gt;ioutil&lt;/span&gt;&lt;span style=&#34;color: #f8f8f2&#34;&gt;.&lt;/span&gt;&lt;span style=&#34;color: #a6e22e&#34;&gt;NopCloser&lt;/span&gt;&lt;span style=&#34;color: #f8f8f2&#34;&gt;(&lt;/span&gt;&lt;span style=&#34;color: #a6e22e&#34;&gt;low&lt;/span&gt;&lt;span style=&#34;color: #f8f8f2&#34;&gt;)}&lt;/span&gt;
+
+	&lt;span style=&#34;color: #75715e&#34;&gt;// Calls bytes.Reader&amp;#39;s Seek()&lt;/span&gt;
+	&lt;span style=&#34;color: #a6e22e&#34;&gt;top&lt;/span&gt;&lt;span style=&#34;color: #f8f8f2&#34;&gt;.&lt;/span&gt;&lt;span style=&#34;color: #a6e22e&#34;&gt;Seek&lt;/span&gt;&lt;span style=&#34;color: #f8f8f2&#34;&gt;(&lt;/span&gt;&lt;span style=&#34;color: #ae81ff&#34;&gt;0&lt;/span&gt;&lt;span style=&#34;color: #f8f8f2&#34;&gt;,&lt;/span&gt; &lt;span style=&#34;color: #a6e22e&#34;&gt;os&lt;/span&gt;&lt;span style=&#34;color: #f8f8f2&#34;&gt;.&lt;/span&gt;&lt;span style=&#34;color: #a6e22e&#34;&gt;SEEK_CUR&lt;/span&gt;&lt;span style=&#34;color: #f8f8f2&#34;&gt;)&lt;/span&gt;
+
+	&lt;span style=&#34;color: #75715e&#34;&gt;// Calls A&amp;#39;s Read()&lt;/span&gt;
+	&lt;span style=&#34;color: #a6e22e&#34;&gt;top&lt;/span&gt;&lt;span style=&#34;color: #f8f8f2&#34;&gt;.&lt;/span&gt;&lt;span style=&#34;color: #a6e22e&#34;&gt;Read&lt;/span&gt;&lt;span style=&#34;color: #f8f8f2&#34;&gt;(&lt;/span&gt;&lt;span style=&#34;color: #66d9ef&#34;&gt;nil&lt;/span&gt;&lt;span style=&#34;color: #f8f8f2&#34;&gt;)&lt;/span&gt;
+&lt;span style=&#34;color: #f8f8f2&#34;&gt;}&lt;/span&gt;
+&lt;/pre&gt;&lt;/div&gt;
+&lt;/p&gt;
+
+&lt;p&gt;Beware a bit of this method though, since it tends to make code slightly
+confusing. It was &lt;a href=&#34;https://golang.org/src/io/ioutil/ioutil.go#L114&#34;&gt;inspired&lt;/a&gt; by
+the Go&amp;rsquo;s builtin &lt;code&gt;ioutil.NopCloser&lt;/code&gt; (why the heck does this only exist for
+&lt;code&gt;io.Reader&lt;/code&gt;, not &lt;code&gt;io.Writer&lt;/code&gt;, Rob?).&lt;/p&gt;
+
+&lt;h2 id=&#34;seek-is-hard:1f9b02d070b8cc71a61fea0c5ae37919&#34;&gt;&lt;code&gt;Seek()&lt;/code&gt; is hard&lt;/h2&gt;
+
+&lt;p&gt;&lt;code&gt;Seek()&lt;/code&gt; is a handy interface, but when using it, it always feels like a bit
+the 1970s could ring you any moment. You probably already figured out yourself,
+what Im gonna tell you in the next few lines though.&lt;/p&gt;
+
+&lt;p&gt;Chances are, when you think about implementing &lt;code&gt;Seek()&lt;/code&gt;, that you need
+to map from an underlying stream to a virtual, somehow processed stream.
+&lt;code&gt;Seek()&lt;/code&gt;&amp;rsquo;s job is then to position your stream at a certain offset - and
+this is offset is relative to the virtual stream which the user sees (popular
+beginner mistake: mixing offset types). Example: A Reader that &amp;ldquo;skips&amp;rdquo; a header
+in front of the actual data. In this case &lt;code&gt;Seek()&lt;/code&gt; just needs to add the
+length of the header to get the underlying offset from the virtual offset.
+An exercise for the reader is imagining a &lt;code&gt;Seek()&lt;/code&gt; that maps from a (virtual)
+uncompressed stream to an (underlying) compressed data stream. You&amp;rsquo;ll notice
+that &lt;code&gt;Seek()&lt;/code&gt; gets a little harder in that case.&lt;/p&gt;
+
+&lt;p&gt;Another source of confusion is what &lt;code&gt;Seek()&lt;/code&gt; does for a &lt;code&gt;io.ReadWriter&lt;/code&gt;.
+Answer: It depends on the implementation. In most cases it&amp;rsquo;s probably moving
+the read offset. In some both. In a few cases it might even make sense to only
+moving the write pointer. Consult your manual or a doctor.&lt;/p&gt;
+
+&lt;p&gt;In some usecases you may not be able to provide the full spec of &lt;code&gt;Seek()&lt;/code&gt;.
+Imagine a stream of data you consume bytewise. You can&amp;rsquo;t go back, since caching
+all previous input might be no option (How to handle &lt;code&gt;SEEK_CUR&lt;/code&gt; with negative
+offset?). Or you might process a video stream, where you don&amp;rsquo;t know when it ends
+(how to handle &lt;code&gt;SEEK_END&lt;/code&gt;?). Is it okay to return something like
+&lt;code&gt;ErrNotImplemented&lt;/code&gt; in this case? Probably, but my advice would be either
+to document that clearly or use a different function name than &lt;code&gt;Seek()&lt;/code&gt; which
+makes clear it&amp;rsquo;s not a full &lt;code&gt;Seek()&lt;/code&gt; implementation.&lt;/p&gt;
+
+&lt;p&gt;&lt;a href=&#34;https://golang.org/pkg/io/#ReaderAt&#34;&gt;There is also&lt;/a&gt; &lt;code&gt;ReaderAt&lt;/code&gt; which is a bit
+like a combined seek &amp;amp; read. You might know this from &lt;code&gt;preadv(3)&lt;/code&gt; on (some)
+Unix-derivatives. An important difference is that it allows the caller to
+call &lt;code&gt;ReadAt()&lt;/code&gt; in parallel.
+Once you have &lt;code&gt;Seek()&lt;/code&gt; you can easily implement &lt;code&gt;ReadAt()&lt;/code&gt;, although you
+might need to introduce an additional locking mechanism for the parallel reads.&lt;/p&gt;
+
+&lt;p&gt;By the way, if you want to go back from the end, you have to use &lt;code&gt;SEEK_END&lt;/code&gt; with
+a negative offset. No, not a positive offset. Popular mistake.&lt;/p&gt;
+
+&lt;h2 id=&#34;the-perks-of-io-eof:1f9b02d070b8cc71a61fea0c5ae37919&#34;&gt;The perks of &lt;code&gt;io.EOF&lt;/code&gt;&lt;/h2&gt;
+
+&lt;p&gt;The story of EOF is a story full of misunderstandings.
+In C it was a the &lt;code&gt;#define&lt;/code&gt; on the number &lt;code&gt;-1&lt;/code&gt; and it was returned by
+&lt;code&gt;read(3)&lt;/code&gt;.  This led some people to the misunderstanding that &lt;code&gt;EOF&lt;/code&gt;
+was actually a character that sits at the end of the file, waiting for you to
+be consumed. Kind of weird thinking when you can only read the numbers [0-255]
+from a byte. Go has you covered here: &lt;code&gt;io.EOF&lt;/code&gt; is just an error return value,
+that you should check on.&lt;/p&gt;
+
+&lt;p&gt;Some users falsely expect that no data was read when &lt;code&gt;io.EOF&lt;/code&gt; is returned.
+This is usually not true, there might be any valid number of bytes read before
+reaching the end of the file (that&amp;rsquo;s why you always check for &lt;code&gt;io.EOF&lt;/code&gt; separately).
+Note that many current Readers behave slightly different: They return &lt;code&gt;nil&lt;/code&gt; on
+the last block of data, but will return a byte count of 0 and &lt;code&gt;io.EOF&lt;/code&gt; on the
+next &lt;code&gt;Read()&lt;/code&gt; call.  That&amp;rsquo;s slightly less convenient, but okay too.&lt;/p&gt;
+
+&lt;p&gt;It gets a bit confusing when seeking to or over the end of a file.
+What will &lt;code&gt;Seek()&lt;/code&gt; return? The offset of the stream end? &lt;code&gt;io.EOF&lt;/code&gt; as error?
+Is seeking back allowed after hitting EOF?
+There is no answer, since this depends on the implementation.
+Example: For some writers it might make sense to seek over the end of the file
+and write something there &amp;mdash; an overlay writer (see below TODO) is a good
+example for this. Other usecases might have different needs.&lt;/p&gt;
+
+&lt;p&gt;&lt;em&gt;Conclusion:&lt;/em&gt; You should always think about &lt;code&gt;io.EOF&lt;/code&gt; and whether you need
+to check for it separately. If you come from other languages: reading an empty
+file in Go will return &lt;code&gt;0 / io.EOF&lt;/code&gt; on the &lt;em&gt;first&lt;/em&gt; read.&lt;/p&gt;
+
+&lt;h1 id=&#34;an-io-showcase:1f9b02d070b8cc71a61fea0c5ae37919&#34;&gt;An &lt;code&gt;io&lt;/code&gt; showcase&lt;/h1&gt;
+
+&lt;p&gt;To round this writing up, here are some of the more interesting
+&lt;code&gt;io.Reader/Writers&lt;/code&gt; in &lt;code&gt;brig&lt;/code&gt;. Some might be useful in other applications:&lt;/p&gt;
+
+&lt;h2 id=&#34;sizeaccumulator-https-godoc-org-github-com-disorganizer-brig-util-sizeaccumulator:1f9b02d070b8cc71a61fea0c5ae37919&#34;&gt;&lt;a href=&#34;https://godoc.org/github.com/disorganizer/brig/util#SizeAccumulator&#34;&gt;SizeAccumulator&lt;/a&gt;&lt;/h2&gt;
+
+&lt;p&gt;A small &lt;code&gt;io.Writer&lt;/code&gt; that simply counts the number of bytes written to it.
+This is very useful in conjunction with &lt;code&gt;io.TeeReader&lt;/code&gt; to count how many
+bytes of data were written to the underlying stream of data (Remember: &lt;code&gt;Write()&lt;/code&gt; will tell
+you the number of bytes taken as input). Example without error handling:&lt;/p&gt;
+
+&lt;p&gt;&lt;div class=&#34;highlight&#34; style=&#34;background: #272822&#34;&gt;&lt;pre style=&#34;line-height: 125%&#34;&gt;&lt;span style=&#34;color: #66d9ef&#34;&gt;func&lt;/span&gt; &lt;span style=&#34;color: #a6e22e&#34;&gt;hello&lt;/span&gt;&lt;span style=&#34;color: #f8f8f2&#34;&gt;()&lt;/span&gt; &lt;span style=&#34;color: #f8f8f2&#34;&gt;{&lt;/span&gt;
+	&lt;span style=&#34;color: #a6e22e&#34;&gt;s&lt;/span&gt; &lt;span style=&#34;color: #f92672&#34;&gt;:=&lt;/span&gt; &lt;span style=&#34;color: #f92672&#34;&gt;&amp;amp;&lt;/span&gt;&lt;span style=&#34;color: #a6e22e&#34;&gt;SizeAccumulator&lt;/span&gt;&lt;span style=&#34;color: #f8f8f2&#34;&gt;{}&lt;/span&gt;
+	&lt;span style=&#34;color: #a6e22e&#34;&gt;teeR&lt;/span&gt; &lt;span style=&#34;color: #f92672&#34;&gt;:=&lt;/span&gt; &lt;span style=&#34;color: #a6e22e&#34;&gt;io&lt;/span&gt;&lt;span style=&#34;color: #f8f8f2&#34;&gt;.&lt;/span&gt;&lt;span style=&#34;color: #a6e22e&#34;&gt;TeeReader&lt;/span&gt;&lt;span style=&#34;color: #f8f8f2&#34;&gt;(&lt;/span&gt;&lt;span style=&#34;color: #a6e22e&#34;&gt;bytes&lt;/span&gt;&lt;span style=&#34;color: #f8f8f2&#34;&gt;.&lt;/span&gt;&lt;span style=&#34;color: #a6e22e&#34;&gt;NewReader&lt;/span&gt;&lt;span style=&#34;color: #f8f8f2&#34;&gt;([]byte(&lt;/span&gt;&lt;span style=&#34;color: #e6db74&#34;&gt;&amp;quot;Hello, &amp;quot;&lt;/span&gt;&lt;span style=&#34;color: #f8f8f2&#34;&gt;)),&lt;/span&gt; &lt;span style=&#34;color: #a6e22e&#34;&gt;s&lt;/span&gt;&lt;span style=&#34;color: #f8f8f2&#34;&gt;)&lt;/span&gt;
+	&lt;span style=&#34;color: #a6e22e&#34;&gt;io&lt;/span&gt;&lt;span style=&#34;color: #f8f8f2&#34;&gt;.&lt;/span&gt;&lt;span style=&#34;color: #a6e22e&#34;&gt;Copy&lt;/span&gt;&lt;span style=&#34;color: #f8f8f2&#34;&gt;(&lt;/span&gt;&lt;span style=&#34;color: #a6e22e&#34;&gt;os&lt;/span&gt;&lt;span style=&#34;color: #f8f8f2&#34;&gt;.&lt;/span&gt;&lt;span style=&#34;color: #a6e22e&#34;&gt;Stdout&lt;/span&gt;&lt;span style=&#34;color: #f8f8f2&#34;&gt;,&lt;/span&gt; &lt;span style=&#34;color: #a6e22e&#34;&gt;teeR&lt;/span&gt;&lt;span style=&#34;color: #f8f8f2&#34;&gt;)&lt;/span&gt;
+	&lt;span style=&#34;color: #a6e22e&#34;&gt;fmt&lt;/span&gt;&lt;span style=&#34;color: #f8f8f2&#34;&gt;.&lt;/span&gt;&lt;span style=&#34;color: #a6e22e&#34;&gt;Printf&lt;/span&gt;&lt;span style=&#34;color: #f8f8f2&#34;&gt;(&lt;/span&gt;&lt;span style=&#34;color: #e6db74&#34;&gt;&amp;quot;wrote %d bytes to stdout\n&amp;quot;&lt;/span&gt;&lt;span style=&#34;color: #f8f8f2&#34;&gt;,&lt;/span&gt; &lt;span style=&#34;color: #a6e22e&#34;&gt;s&lt;/span&gt;&lt;span style=&#34;color: #f8f8f2&#34;&gt;.&lt;/span&gt;&lt;span style=&#34;color: #a6e22e&#34;&gt;Size&lt;/span&gt;&lt;span style=&#34;color: #f8f8f2&#34;&gt;())&lt;/span&gt;
+	&lt;span style=&#34;color: #75715e&#34;&gt;// Output: Hello, wrote 7 bytes to stdout&lt;/span&gt;
+&lt;span style=&#34;color: #f8f8f2&#34;&gt;}&lt;/span&gt;
+&lt;/pre&gt;&lt;/div&gt;
+&lt;/p&gt;
+
+&lt;h2 id=&#34;timeoutwriter-timeoutreader-https-godoc-org-github-com-disorganizer-brig-util-timeoutwriter:1f9b02d070b8cc71a61fea0c5ae37919&#34;&gt;&lt;a href=&#34;https://godoc.org/github.com/disorganizer/brig/util#TimeoutWriter&#34;&gt;TimeoutWriter / TimeoutReader&lt;/a&gt;&lt;/h2&gt;
+
+&lt;p&gt;A &lt;code&gt;io.Reader&lt;/code&gt; and a &lt;code&gt;io.Writer&lt;/code&gt; that wraps another reader or writer.
+If the respective operation is not done until a certain deadline, it will
+return. Any results arriving later will be dismissed.&lt;/p&gt;
+
+&lt;p&gt;TODO: Write.&lt;/p&gt;
+
+&lt;h2 id=&#34;seekbuffer-https-godoc-org-github-com-disorganizer-brig-util-seekbuffer:1f9b02d070b8cc71a61fea0c5ae37919&#34;&gt;&lt;a href=&#34;https://godoc.org/github.com/disorganizer/brig/util#SeekBuffer&#34;&gt;SeekBuffer&lt;/a&gt;&lt;/h2&gt;
+
+&lt;p&gt;A &lt;code&gt;bytes.Buffer&lt;/code&gt; that supports &lt;code&gt;Seek()&lt;/code&gt;. The &lt;code&gt;Seek()&lt;/code&gt; call
+will move both the read and write offset. Go&amp;rsquo;s &lt;code&gt;bytes.Buffer&lt;/code&gt; does not
+support &lt;code&gt;Seek()&lt;/code&gt; because it would be unclear what &lt;code&gt;Seek()&lt;/code&gt; would do on it
+and because &lt;code&gt;bytes.Buffer&lt;/code&gt; is not required to hold all data that has been
+read already. &lt;code&gt;SeekBuffer&lt;/code&gt; is stupid and can do this therefore.
+(Never underestimate the power of stupid things.)&lt;/p&gt;
+
+&lt;h2 id=&#34;syncreadwriter-https-godoc-org-github-com-disorganizer-brig-util-syncreadwriter:1f9b02d070b8cc71a61fea0c5ae37919&#34;&gt;&lt;a href=&#34;https://godoc.org/github.com/disorganizer/brig/util#SyncReadWriter&#34;&gt;SyncReadWriter&lt;/a&gt;&lt;/h2&gt;
+
+&lt;p&gt;Simply a &lt;code&gt;io.ReadWriter&lt;/code&gt; that protects each call of &lt;code&gt;Read()&lt;/code&gt; and &lt;code&gt;Write()&lt;/code&gt;
+with a &lt;code&gt;sync.Mutex&lt;/code&gt;. Very useful for simulating a &amp;ldquo;network&amp;rdquo; where each party
+might want to write or read to the network at any time.&lt;/p&gt;
+
+&lt;h2 id=&#34;tunnel-https-godoc-org-github-com-disorganizer-brig-util-tunnel:1f9b02d070b8cc71a61fea0c5ae37919&#34;&gt;&lt;a href=&#34;https://godoc.org/github.com/disorganizer/brig/util/tunnel&#34;&gt;Tunnel&lt;/a&gt;&lt;/h2&gt;
+
+&lt;p&gt;A &lt;code&gt;io.ReadWriter&lt;/code&gt; that encrypts data written to it and decrypts it on
+&lt;code&gt;Read()&lt;/code&gt;. It uses elliptic curve diffie-hellman to estimate an AES-key between
+both sides.  While it provides good encryption, it does not provide any
+authentication, nor does it provide suitable protection against man-in-the-middle
+attacks. It&amp;rsquo;s the caller&amp;rsquo;s responsibility to make sure he&amp;rsquo;s actually speaking to
+the right party.&lt;/p&gt;
+
+&lt;h2 id=&#34;layer-https-godoc-org-github-com-disorganizer-brig-store-layer:1f9b02d070b8cc71a61fea0c5ae37919&#34;&gt;&lt;a href=&#34;https://godoc.org/github.com/disorganizer/brig/store#Layer&#34;&gt;Layer&lt;/a&gt;&lt;/h2&gt;
+
+&lt;p&gt;A &lt;code&gt;io.ReadWriter&lt;/code&gt; that &lt;em&gt;overlays&lt;/em&gt; a &lt;code&gt;io.Reader&lt;/code&gt;. Every write is cached in
+memory and merged together with the actual data on the next read.
+&lt;code&gt;Seek()&lt;/code&gt; is supported and may be used to seek over the end of the original
+data stream in order to extend the stream. Additionally the stream may be
+truncated.&lt;/p&gt;
+
+&lt;h2 id=&#34;compress-readseeker-compress-writer-https-godoc-org-github-com-disorganizer-brig-store-compress:1f9b02d070b8cc71a61fea0c5ae37919&#34;&gt;&lt;a href=&#34;https://godoc.org/github.com/disorganizer/brig/store/compress&#34;&gt;compress.ReadSeeker / compress.Writer&lt;/a&gt;&lt;/h2&gt;
+
+&lt;p&gt;Compressed and decompresses input using a variety of different compression
+algorithms (&lt;code&gt;none&lt;/code&gt; is also supported). The greatest benefit compared to other
+implementations is the support for &lt;code&gt;Seek()&lt;/code&gt; in the reader part.&lt;/p&gt;
+
+&lt;h2 id=&#34;encrypt-readseeker-encrypt-writer-https-godoc-org-github-com-disorganizer-brig-store-encrypt:1f9b02d070b8cc71a61fea0c5ae37919&#34;&gt;&lt;a href=&#34;https://godoc.org/github.com/disorganizer/brig/store/encrypt&#34;&gt;encrypt.ReadSeeker / encrypt.Writer&lt;/a&gt;&lt;/h2&gt;
+
+&lt;p&gt;Encrypts and decrypts input using AES-GCM or ChaCha20. The data is chunked into
+blocks (consisting of a nonce, a MAC and the data) and a header which contains
+the settings used for encryption. It supports &lt;code&gt;Seek()&lt;/code&gt; in the reader part.&lt;/p&gt;
+
+&lt;h1 id=&#34;conclusion:1f9b02d070b8cc71a61fea0c5ae37919&#34;&gt;Conclusion&lt;/h1&gt;
+
+&lt;p&gt;Phew, that was a lot of text. I know some of you will just skip here for a
+TL;DR. Those lazy bastards shall have this checklist:&lt;/p&gt;
+
+&lt;ul&gt;
+&lt;li&gt;Make your &lt;code&gt;io.Reader&lt;/code&gt; and &lt;code&gt;io.Writer&lt;/code&gt; is (easily) stackable.&lt;/li&gt;
+&lt;li&gt;Implement &lt;code&gt;WriteTo/ReadFrom&lt;/code&gt; for (possibly) less copying.&lt;/li&gt;
+&lt;/ul&gt;
+
+&lt;p&gt;As final tip: You might want to use these packages when testing your &lt;code&gt;io.*&lt;/code&gt;
+stuff (or get inspiration from):&lt;/p&gt;
+
+&lt;ul&gt;
+&lt;li&gt;&lt;a href=&#34;https://golang.org/pkg/testing/iotest&#34;&gt;https://golang.org/pkg/testing/iotest&lt;/a&gt;.&lt;/li&gt;
+&lt;li&gt;&lt;a href=&#34;https://golang.org/pkg/io/ioutil/&#34;&gt;https://golang.org/pkg/io/ioutil/&lt;/a&gt;&lt;/li&gt;
+&lt;li&gt;&lt;a href=&#34;https://godoc.org/github.com/disorganizer/brig/util/testutil&#34;&gt;https://godoc.org/github.com/disorganizer/brig/util/testutil&lt;/a&gt;&lt;/li&gt;
+&lt;/ul&gt;
+
+&lt;p&gt;&lt;em&gt;Remember:&lt;/em&gt; You don&amp;rsquo;t need to write files on disk. Use in-memory buffers
+(&lt;code&gt;&amp;amp;bytes.Buffer{}&lt;/code&gt;!) in your tests for performance and reproducibility.&lt;/p&gt;
+
+&lt;p&gt;TODO: Points to fix:&lt;/p&gt;
+
+&lt;ul&gt;
+&lt;li&gt;Embedded interfaces (easier stacking)&lt;/li&gt;
+&lt;li&gt;No Close() on Close()&lt;/li&gt;
+&lt;li&gt;bufio?&lt;/li&gt;
+&lt;li&gt;WriteTo/ReadFrom.&lt;/li&gt;
+&lt;/ul&gt;
+</description>
+    </item>
     
     <item>
       <title>Source Layout</title>
@@ -24,7 +461,7 @@ interact. Here&amp;rsquo;s the &lt;code&gt;tree(1)&lt;/code&gt; output of the gi
 writing. I allowed myself to reduce it to the most relevant files, also skipping
 tests and rather unimportant subdirectories:&lt;/p&gt;
 
-&lt;div class=&#34;highlight&#34; style=&#34;background: #272822&#34;&gt;&lt;pre style=&#34;line-height: 125%&#34;&gt;$ tree &lt;span style=&#34;color: #f8f8f2&#34;&gt;|&lt;/span&gt; grep -v &lt;span style=&#34;color: #e6db74&#34;&gt;&amp;#39;unimportant&amp;#39;&lt;/span&gt; .
+&lt;p&gt;&lt;div class=&#34;highlight&#34; style=&#34;background: #272822&#34;&gt;&lt;pre style=&#34;line-height: 125%&#34;&gt;&lt;span style=&#34;color: #f8f8f2&#34;&gt;$ &lt;/span&gt;tree | grep -v &lt;span style=&#34;color: #e6db74&#34;&gt;&amp;#39;unimportant&amp;#39;&lt;/span&gt; .
 ├── doc.go            &lt;span style=&#34;color: #75715e&#34;&gt;# Top-level documentation.&lt;/span&gt;
 ├── Makefile          &lt;span style=&#34;color: #75715e&#34;&gt;# Makefile with often used tools.&lt;/span&gt;
 ├── brig              &lt;span style=&#34;color: #75715e&#34;&gt;# Source of the `brig` binary...&lt;/span&gt;
@@ -77,7 +514,7 @@ tests and rather unimportant subdirectories:&lt;/p&gt;
 │   └── std.go        &lt;span style=&#34;color: #75715e&#34;&gt;# Standard utils that should be in the standard lib.&lt;/span&gt;
 └── version.go        &lt;span style=&#34;color: #75715e&#34;&gt;# Semantic versioning of the brig util/library.&lt;/span&gt;
 &lt;/pre&gt;&lt;/div&gt;
-
+&lt;/p&gt;
 
 &lt;p&gt;You might already have an idea how &lt;code&gt;brig&lt;/code&gt; is working by now. There&amp;rsquo;s a
 command-line utility that speaks to a daemon that was somehow started, which
@@ -122,14 +559,14 @@ files. Doesn&amp;rsquo;t sound like an impressive problem, I know.&lt;/p&gt;
 extending them or truncating them to some size? With the cli interface it&amp;rsquo;s not
 much of a problem, a simple &lt;code&gt;brig add&lt;/code&gt; updates the file:&lt;/p&gt;
 
-&lt;div class=&#34;highlight&#34; style=&#34;background: #272822&#34;&gt;&lt;pre style=&#34;line-height: 125%&#34;&gt;$ &lt;span style=&#34;color: #f8f8f2&#34;&gt;echo&lt;/span&gt; -n &lt;span style=&#34;color: #e6db74&#34;&gt;&amp;#39;What now?&amp;#39;&lt;/span&gt; &amp;gt; file.txt 
-$ brig add file.txt &lt;span style=&#34;color: #f92672&#34;&gt;&amp;amp;&amp;amp;&lt;/span&gt; brig cat file.txt
+&lt;p&gt;&lt;div class=&#34;highlight&#34; style=&#34;background: #272822&#34;&gt;&lt;pre style=&#34;line-height: 125%&#34;&gt;&lt;span style=&#34;color: #f8f8f2&#34;&gt;$ echo&lt;/span&gt; -n &lt;span style=&#34;color: #e6db74&#34;&gt;&amp;#39;What now?&amp;#39;&lt;/span&gt; &amp;gt; file.txt 
+&lt;span style=&#34;color: #f8f8f2&#34;&gt;$ &lt;/span&gt;brig add file.txt &lt;span style=&#34;color: #f92672&#34;&gt;&amp;amp;&amp;amp;&lt;/span&gt; brig cat file.txt
 What now?
-$ &lt;span style=&#34;color: #f8f8f2&#34;&gt;echo&lt;/span&gt; &lt;span style=&#34;color: #e6db74&#34;&gt;&amp;#39; PARTY!&amp;#39;&lt;/span&gt; &amp;gt;&amp;gt; file.txt
-$ brig add file.txt &lt;span style=&#34;color: #f92672&#34;&gt;&amp;amp;&amp;amp;&lt;/span&gt; brig cat file.txt
+&lt;span style=&#34;color: #f8f8f2&#34;&gt;$ echo&lt;/span&gt; &lt;span style=&#34;color: #e6db74&#34;&gt;&amp;#39; PARTY!&amp;#39;&lt;/span&gt; &amp;gt;&amp;gt; file.txt
+&lt;span style=&#34;color: #f8f8f2&#34;&gt;$ &lt;/span&gt;brig add file.txt &lt;span style=&#34;color: #f92672&#34;&gt;&amp;amp;&amp;amp;&lt;/span&gt; brig cat file.txt
 What now? PARTY!
 &lt;/pre&gt;&lt;/div&gt;
-
+&lt;/p&gt;
 
 &lt;p&gt;The file is simply hashed and encrypted as a whole and is added to &lt;code&gt;ipfs&lt;/code&gt;.
 A new entry in the version history will be created and the next &lt;code&gt;cat&lt;/code&gt;
@@ -207,7 +644,7 @@ part where fuse and brig actually need to&amp;hellip; fuse.&lt;/p&gt;
 
 &lt;p&gt;Here&amp;rsquo;s a small session inside the fuse layer:&lt;/p&gt;
 
-&lt;div class=&#34;highlight&#34; style=&#34;background: #272822&#34;&gt;&lt;pre style=&#34;line-height: 125%&#34;&gt;λ ~ → brig mount /tmp/mount &lt;span style=&#34;color: #f92672&#34;&gt;&amp;amp;&amp;amp;&lt;/span&gt; &lt;span style=&#34;color: #f8f8f2&#34;&gt;cd&lt;/span&gt; /tmp/mount
+&lt;p&gt;&lt;div class=&#34;highlight&#34; style=&#34;background: #272822&#34;&gt;&lt;pre style=&#34;line-height: 125%&#34;&gt;λ ~ → brig mount /tmp/mount &lt;span style=&#34;color: #f92672&#34;&gt;&amp;amp;&amp;amp;&lt;/span&gt; &lt;span style=&#34;color: #f8f8f2&#34;&gt;cd&lt;/span&gt; /tmp/mount
 λ /tmp/mount → touch hello  &lt;span style=&#34;color: #75715e&#34;&gt;# Creating file work. &lt;/span&gt;
 λ /tmp/mount → cat hello    &lt;span style=&#34;color: #75715e&#34;&gt;# Although they contain weird stuff.&lt;/span&gt;
 NaNaNaNaNaNaNaNaNaNaNaNaNaNaNaNaNaNaNaNaNaNaNaNaNaNaNaNaNa
@@ -216,14 +653,14 @@ NaNaNaNaNaNaNaNaNaNaNaNaNaNaNaNaNaNaNaNaNaNaNaNaNaNaNaNaNa
 NaNaNaNaNaNaNaNaNaNaNaNaNa%
 λ /tmp/mount → stat hello   &lt;span style=&#34;color: #75715e&#34;&gt;# Every file is 200 bytes in size currently.&lt;/span&gt;
 File: „hello“
-&lt;span style=&#34;color: #f92672&#34;&gt;(&lt;/span&gt;...&lt;span style=&#34;color: #f92672&#34;&gt;)&lt;/span&gt; Size: &lt;span style=&#34;color: #ae81ff&#34;&gt;200&lt;/span&gt;  &lt;span style=&#34;color: #f92672&#34;&gt;(&lt;/span&gt;...&lt;span style=&#34;color: #f92672&#34;&gt;)&lt;/span&gt;
+&lt;span style=&#34;color: #f92672&#34;&gt;(&lt;/span&gt;...&lt;span style=&#34;color: #f92672&#34;&gt;)&lt;/span&gt; Size: 200  &lt;span style=&#34;color: #f92672&#34;&gt;(&lt;/span&gt;...&lt;span style=&#34;color: #f92672&#34;&gt;)&lt;/span&gt;
 λ /tmp/mount → ls           &lt;span style=&#34;color: #75715e&#34;&gt;# Also enumerating the directory.&lt;/span&gt;
 hello  &lt;span style=&#34;color: #f8f8f2&#34;&gt;test&lt;/span&gt;
 λ /tmp/mount → mkdir new    &lt;span style=&#34;color: #75715e&#34;&gt;# Adding directories even somehow works.&lt;/span&gt;
 hello  new  &lt;span style=&#34;color: #f8f8f2&#34;&gt;test&lt;/span&gt;
-$ brig mount -u /tmp/mount
+&lt;span style=&#34;color: #f8f8f2&#34;&gt;$ &lt;/span&gt;brig mount -u /tmp/mount
 &lt;/pre&gt;&lt;/div&gt;
-
+&lt;/p&gt;
 
 &lt;p&gt;It already feels like a pretty normal directory. Most of it&amp;rsquo;s code is inspired
 from bolt-mount, which is described in this
@@ -284,11 +721,11 @@ and need a certain number of arguments to work.&lt;/p&gt;
 
 &lt;p&gt;It would be nice to write something like this:&lt;/p&gt;
 
-&lt;div class=&#34;highlight&#34; style=&#34;background: #272822&#34;&gt;&lt;pre style=&#34;line-height: 125%&#34;&gt;&lt;span style=&#34;color: #75715e&#34;&gt;// ...&lt;/span&gt;
+&lt;p&gt;&lt;div class=&#34;highlight&#34; style=&#34;background: #272822&#34;&gt;&lt;pre style=&#34;line-height: 125%&#34;&gt;&lt;span style=&#34;color: #75715e&#34;&gt;// ...&lt;/span&gt;
 &lt;span style=&#34;color: #a6e22e&#34;&gt;Handle&lt;/span&gt;&lt;span style=&#34;color: #f8f8f2&#34;&gt;:&lt;/span&gt; &lt;span style=&#34;color: #a6e22e&#34;&gt;withArgCheck&lt;/span&gt;&lt;span style=&#34;color: #f8f8f2&#34;&gt;(&lt;/span&gt;&lt;span style=&#34;color: #a6e22e&#34;&gt;needAtLeast&lt;/span&gt;&lt;span style=&#34;color: #f8f8f2&#34;&gt;(&lt;/span&gt;&lt;span style=&#34;color: #ae81ff&#34;&gt;2&lt;/span&gt;&lt;span style=&#34;color: #f8f8f2&#34;&gt;),&lt;/span&gt; &lt;span style=&#34;color: #a6e22e&#34;&gt;withDaemon&lt;/span&gt;&lt;span style=&#34;color: #f8f8f2&#34;&gt;(&lt;/span&gt;&lt;span style=&#34;color: #a6e22e&#34;&gt;handleAdd&lt;/span&gt;&lt;span style=&#34;color: #f8f8f2&#34;&gt;)),&lt;/span&gt;
 &lt;span style=&#34;color: #75715e&#34;&gt;// ...&lt;/span&gt;
 &lt;/pre&gt;&lt;/div&gt;
-
+&lt;/p&gt;
 
 &lt;p&gt;&amp;hellip; which is nicely possible by writing a function that returns a closure:&lt;/p&gt;
 
@@ -365,7 +802,7 @@ but you just have a &lt;code&gt;io.Writer&lt;/code&gt;, then &lt;code&gt;io.Pipe
 
 &lt;p&gt;Here&amp;rsquo;s how it looks in practice:&lt;/p&gt;
 
-&lt;div class=&#34;highlight&#34; style=&#34;background: #272822&#34;&gt;&lt;pre style=&#34;line-height: 125%&#34;&gt;&lt;span style=&#34;color: #66d9ef&#34;&gt;func&lt;/span&gt; &lt;span style=&#34;color: #a6e22e&#34;&gt;NewFileReader&lt;/span&gt;&lt;span style=&#34;color: #f8f8f2&#34;&gt;(&lt;/span&gt;&lt;span style=&#34;color: #a6e22e&#34;&gt;key&lt;/span&gt; &lt;span style=&#34;color: #f8f8f2&#34;&gt;[]&lt;/span&gt;&lt;span style=&#34;color: #66d9ef&#34;&gt;byte&lt;/span&gt;&lt;span style=&#34;color: #f8f8f2&#34;&gt;,&lt;/span&gt; &lt;span style=&#34;color: #a6e22e&#34;&gt;r&lt;/span&gt; &lt;span style=&#34;color: #a6e22e&#34;&gt;io&lt;/span&gt;&lt;span style=&#34;color: #f8f8f2&#34;&gt;.&lt;/span&gt;&lt;span style=&#34;color: #a6e22e&#34;&gt;Reader&lt;/span&gt;&lt;span style=&#34;color: #f8f8f2&#34;&gt;)&lt;/span&gt; &lt;span style=&#34;color: #f8f8f2&#34;&gt;(&lt;/span&gt;&lt;span style=&#34;color: #a6e22e&#34;&gt;io&lt;/span&gt;&lt;span style=&#34;color: #f8f8f2&#34;&gt;.&lt;/span&gt;&lt;span style=&#34;color: #a6e22e&#34;&gt;Reader&lt;/span&gt;&lt;span style=&#34;color: #f8f8f2&#34;&gt;,&lt;/span&gt; &lt;span style=&#34;color: #66d9ef&#34;&gt;error&lt;/span&gt;&lt;span style=&#34;color: #f8f8f2&#34;&gt;)&lt;/span&gt; &lt;span style=&#34;color: #f8f8f2&#34;&gt;{&lt;/span&gt;
+&lt;p&gt;&lt;div class=&#34;highlight&#34; style=&#34;background: #272822&#34;&gt;&lt;pre style=&#34;line-height: 125%&#34;&gt;&lt;span style=&#34;color: #66d9ef&#34;&gt;func&lt;/span&gt; &lt;span style=&#34;color: #a6e22e&#34;&gt;NewFileReader&lt;/span&gt;&lt;span style=&#34;color: #f8f8f2&#34;&gt;(&lt;/span&gt;&lt;span style=&#34;color: #a6e22e&#34;&gt;key&lt;/span&gt; &lt;span style=&#34;color: #f8f8f2&#34;&gt;[]&lt;/span&gt;&lt;span style=&#34;color: #66d9ef&#34;&gt;byte&lt;/span&gt;&lt;span style=&#34;color: #f8f8f2&#34;&gt;,&lt;/span&gt; &lt;span style=&#34;color: #a6e22e&#34;&gt;r&lt;/span&gt; &lt;span style=&#34;color: #a6e22e&#34;&gt;io&lt;/span&gt;&lt;span style=&#34;color: #f8f8f2&#34;&gt;.&lt;/span&gt;&lt;span style=&#34;color: #a6e22e&#34;&gt;Reader&lt;/span&gt;&lt;span style=&#34;color: #f8f8f2&#34;&gt;)&lt;/span&gt; &lt;span style=&#34;color: #f8f8f2&#34;&gt;(&lt;/span&gt;&lt;span style=&#34;color: #a6e22e&#34;&gt;io&lt;/span&gt;&lt;span style=&#34;color: #f8f8f2&#34;&gt;.&lt;/span&gt;&lt;span style=&#34;color: #a6e22e&#34;&gt;Reader&lt;/span&gt;&lt;span style=&#34;color: #f8f8f2&#34;&gt;,&lt;/span&gt; &lt;span style=&#34;color: #66d9ef&#34;&gt;error&lt;/span&gt;&lt;span style=&#34;color: #f8f8f2&#34;&gt;)&lt;/span&gt; &lt;span style=&#34;color: #f8f8f2&#34;&gt;{&lt;/span&gt;
 	&lt;span style=&#34;color: #a6e22e&#34;&gt;pr&lt;/span&gt;&lt;span style=&#34;color: #f8f8f2&#34;&gt;,&lt;/span&gt; &lt;span style=&#34;color: #a6e22e&#34;&gt;pw&lt;/span&gt; &lt;span style=&#34;color: #f92672&#34;&gt;:=&lt;/span&gt; &lt;span style=&#34;color: #a6e22e&#34;&gt;io&lt;/span&gt;&lt;span style=&#34;color: #f8f8f2&#34;&gt;.&lt;/span&gt;&lt;span style=&#34;color: #a6e22e&#34;&gt;Pipe&lt;/span&gt;&lt;span style=&#34;color: #f8f8f2&#34;&gt;()&lt;/span&gt;
 
 	&lt;span style=&#34;color: #75715e&#34;&gt;// Setup the writer part:&lt;/span&gt;
@@ -392,7 +829,7 @@ but you just have a &lt;code&gt;io.Writer&lt;/code&gt;, then &lt;code&gt;io.Pipe
 	&lt;span style=&#34;color: #66d9ef&#34;&gt;return&lt;/span&gt; &lt;span style=&#34;color: #a6e22e&#34;&gt;pr&lt;/span&gt;&lt;span style=&#34;color: #f8f8f2&#34;&gt;,&lt;/span&gt; &lt;span style=&#34;color: #66d9ef&#34;&gt;nil&lt;/span&gt;
 &lt;span style=&#34;color: #f8f8f2&#34;&gt;}&lt;/span&gt;
 &lt;/pre&gt;&lt;/div&gt;
-
+&lt;/p&gt;
 
 &lt;p&gt;That&amp;rsquo;s all for today! For tomorrow a cleanup session is planned and the piece
 of code that derives the AES-Key from an unencrypted file.&lt;/p&gt;

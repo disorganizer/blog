@@ -5,7 +5,7 @@
 <meta name="description" content="">
 <meta name="keywords" content="">
 <meta name="author" content="">
-<meta name="generator" content="Hugo 0.16-DEV" />
+<meta name="generator" content="Hugo 0.14" />
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <link rel="stylesheet" href="https://disorganizer.github.io/blog/css/style.css" type="text/css">
 <link rel="stylesheet" href="https://fonts.googleapis.com/css?family=Source+Code+Pro:400,700" type="text/css">
@@ -58,7 +58,7 @@ interact. Here&rsquo;s the <code>tree(1)</code> output of the git repository at 
 writing. I allowed myself to reduce it to the most relevant files, also skipping
 tests and rather unimportant subdirectories:</p>
 
-<div class="highlight" style="background: #272822"><pre style="line-height: 125%">$ tree <span style="color: #f8f8f2">|</span> grep -v <span style="color: #e6db74">&#39;unimportant&#39;</span> .
+<p><div class="highlight" style="background: #272822"><pre style="line-height: 125%"><span style="color: #f8f8f2">$ </span>tree | grep -v <span style="color: #e6db74">&#39;unimportant&#39;</span> .
 ├── doc.go            <span style="color: #75715e"># Top-level documentation.</span>
 ├── Makefile          <span style="color: #75715e"># Makefile with often used tools.</span>
 ├── brig              <span style="color: #75715e"># Source of the `brig` binary...</span>
@@ -111,7 +111,7 @@ tests and rather unimportant subdirectories:</p>
 │   └── std.go        <span style="color: #75715e"># Standard utils that should be in the standard lib.</span>
 └── version.go        <span style="color: #75715e"># Semantic versioning of the brig util/library.</span>
 </pre></div>
-
+</p>
 
 <p>You might already have an idea how <code>brig</code> is working by now. There&rsquo;s a
 command-line utility that speaks to a daemon that was somehow started, which
