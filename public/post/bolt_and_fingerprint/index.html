@@ -1,55 +1,104 @@
 <!DOCTYPE html>
 <html lang="en-us">
+
 <head>
 <meta charset="utf-8">
-<meta name="description" content="">
-<meta name="keywords" content="">
-<meta name="author" content="">
-<meta name="generator" content="Hugo 0.14" />
-<meta name="viewport" content="width=device-width, initial-scale=1">
-<link rel="stylesheet" href="https://disorganizer.github.io/blog/css/style.css" type="text/css">
-<link rel="stylesheet" href="https://fonts.googleapis.com/css?family=Source+Code+Pro:400,700" type="text/css">
-<link rel="alternate" href="https://disorganizer.github.io/blog/index.xml" type="application/rss+xml" title="brig devlog">
-<title>Stacking closures and more - brig devlog</title>
+<meta http-equiv="X-UA-Compatible" content="chrome=1">
+<meta name="HandheldFriendly" content="True">
+<meta name="MobileOptimized" content="320">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="description" content="Don&#39;t panic">
+
+<base href="https://disorganizer.github.io/blog">
+<title>
+
+
+     Stacking closures and more 
+
+</title>
+<link rel="canonical" href="https://disorganizer.github.io/blog/post/bolt_and_fingerprint/">
+
+
+<script type="text/javascript">
+    var baseURL = 'https:\/\/disorganizer.github.io\/blog';
+    var host = baseURL.substring(0, baseURL.length - 1).replace(/\//g, '');
+    if ((host === window.location.host) && (window.location.protocol !== 'https:')) {
+        window.location.protocol = 'https:';
+    }
+</script>
+
+
+
+
+
+<link rel="stylesheet" href="https://disorganizer.github.io/blog/css/reset.css">
+<link rel="stylesheet" href="https://disorganizer.github.io/blog/css/pygments.css">
+<link rel="stylesheet" href="https://disorganizer.github.io/blog/css/main.css">
+
+
+
+
+
+
+<link rel="shortcut icon"
+
+    href="https://disorganizer.github.io/blog/img/favicon.ico"
+
+>
+
+
+
 </head>
-<body>
-
-<header>
-  <div class="container">
-    <a class="path" href="https://disorganizer.github.io/blog">[brig devlog]</a>
-    <span class="caret"># _</span>
-  </div>
-</header>
-
-<div class="container">
 
 
-<main role="main" class="article">
-  
-<article class="single" itemscope itemtype="http://schema.org/BlogPosting">
-  <div class="meta">
+<body lang="en">
 
-    <span class="key">published on</span>
-    <span class="val"><time itemprop="datePublished" datetime="2016-01-16">January 16, 2016</time></span>
+<section class="header"> 
+    <div class="container">
+        <div class="content">
+            <a href="https://disorganizer.github.io/blog/"><div class="name">Chris Pahl</div></a>
+            <nav>
+                <ul>
+                    <a href="https://disorganizer.github.io/blog/blog/"><li>Blog</li></a>
+                    <a href="https://disorganizer.github.io/blog/about/"><li>About</li></a>
+                    <a href="https://disorganizer.github.io/blog/code/"><li>Code</li></a>
+                </ul>
+            </nav>
+        </div>
+    </div>
+</section>
 
+<section class="icons">
+    <div class="container">
+        <div class="content">
 
+        
+            <a href="//github.com/sahib" target="_blank">
+                <i class="icon ion-social-github"></i>
+            </a>
+        
+        
+        
 
-    <br>
-    <span class="key">tags:</span>
-    <span class="val">
+        
 
-        <a href="https://disorganizer.github.io/blogtags/development">Development</a>
+        
 
-        <a href="https://disorganizer.github.io/blogtags/go">Go</a>
+        
 
-        <a href="https://disorganizer.github.io/blogtags/brig">brig</a>
+        
+            <a href="mailto:sahib@online.de">
+                <i class="icon ion-ios-email larger"></i>
+            </a>
+        
+        </div>
+    </div>
+</section>
 
-    </span>
-
-  </div>
-  <h1 class="headline" itemprop="headline">Stacking closures and more</h1>
-  <section class="body" itemprop="articleBody">
-    <p>A bit more than one day after the last post. Not too bad.
+<section class="main">
+    <div class="container">
+        <div class="content">
+            <p>A bit more than one day after the last post. Not too bad.
 Basically, three smaller things happened since the last time.</p>
 
 <p>First, we now store files serialized as protobufs in the index persistently.
@@ -72,15 +121,15 @@ and need a certain number of arguments to work.</p>
 
 <p>It would be nice to write something like this:</p>
 
-<p><div class="highlight" style="background: #272822"><pre style="line-height: 125%"><span style="color: #75715e">// ...</span>
+<div class="highlight" style="background: #272822"><pre style="line-height: 125%"><span></span><span style="color: #75715e">// ...</span>
 <span style="color: #a6e22e">Handle</span><span style="color: #f8f8f2">:</span> <span style="color: #a6e22e">withArgCheck</span><span style="color: #f8f8f2">(</span><span style="color: #a6e22e">needAtLeast</span><span style="color: #f8f8f2">(</span><span style="color: #ae81ff">2</span><span style="color: #f8f8f2">),</span> <span style="color: #a6e22e">withDaemon</span><span style="color: #f8f8f2">(</span><span style="color: #a6e22e">handleAdd</span><span style="color: #f8f8f2">)),</span>
 <span style="color: #75715e">// ...</span>
 </pre></div>
-</p>
+
 
 <p>&hellip; which is nicely possible by writing a function that returns a closure:</p>
 
-<p><div class="highlight" style="background: #272822"><pre style="line-height: 125%"><span style="color: #66d9ef">type</span> <span style="color: #a6e22e">CheckFunc</span> <span style="color: #66d9ef">func</span><span style="color: #f8f8f2">(</span><span style="color: #a6e22e">ctx</span> <span style="color: #a6e22e">climax</span><span style="color: #f8f8f2">.</span><span style="color: #a6e22e">Context</span><span style="color: #f8f8f2">)</span> <span style="color: #66d9ef">int</span>
+<p><div class="highlight" style="background: #272822"><pre style="line-height: 125%"><span></span><span style="color: #66d9ef">type</span> <span style="color: #a6e22e">CheckFunc</span> <span style="color: #66d9ef">func</span><span style="color: #f8f8f2">(</span><span style="color: #a6e22e">ctx</span> <span style="color: #a6e22e">climax</span><span style="color: #f8f8f2">.</span><span style="color: #a6e22e">Context</span><span style="color: #f8f8f2">)</span> <span style="color: #66d9ef">int</span>
 
 <span style="color: #66d9ef">func</span> <span style="color: #a6e22e">withArgCheck</span><span style="color: #f8f8f2">(</span><span style="color: #a6e22e">checker</span> <span style="color: #a6e22e">CheckFunc</span><span style="color: #f8f8f2">,</span> <span style="color: #a6e22e">handler</span> <span style="color: #a6e22e">climax</span><span style="color: #f8f8f2">.</span><span style="color: #a6e22e">CmdHandler</span><span style="color: #f8f8f2">)</span> <span style="color: #a6e22e">climax</span><span style="color: #f8f8f2">.</span><span style="color: #a6e22e">CmdHandler</span> <span style="color: #f8f8f2">{</span>
 	<span style="color: #66d9ef">return</span> <span style="color: #66d9ef">func</span><span style="color: #f8f8f2">(</span><span style="color: #a6e22e">ctx</span> <span style="color: #a6e22e">climax</span><span style="color: #f8f8f2">.</span><span style="color: #a6e22e">Context</span><span style="color: #f8f8f2">)</span> <span style="color: #66d9ef">int</span> <span style="color: #f8f8f2">{</span>
@@ -120,19 +169,12 @@ and need a certain number of arguments to work.</p>
 <li>A humble start on the FUSE layer.</li>
 </ul>
 
-  </section>
-</article>
+        </div>
+    </div>
+</section>
 
-</main>
 
 
-</div>
-
-<footer>
-  <div class="container">
-    <span class="copyright">&copy; 2016  brig devlog - <a rel="license" href="http://creativecommons.org/licenses/by/4.0/">CC BY 4.0</a></span>
-  </div>
-</footer>
 
 </body>
 </html>

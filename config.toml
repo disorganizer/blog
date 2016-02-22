@@ -1,6 +1,27 @@
 baseurl = "https://disorganizer.github.io/blog"
 languageCode = "en-us"
 title = "brig devlog"
-theme = "base16"
-pygmentsUseClasses = false
+theme = "cocoa"
+pygmentsUseClasses = true
 canonifyurls = true
+
+builddrafts = false
+contentdir = "content"
+layoutdir = "layouts"
+publishdir = "public"
+author = "Chris Pahl"
+pluralizelisttitles = false
+
+[permalinks]
+fixed = ":title/"
+blog = "blog/:slug/"
+
+[params]
+Author = "Chris Pahl"
+CacheBuster = true
+DateForm = "Jan 2, 2006"
+DateFormFull = "Mon Jan 2 2006 15:04:05 MST"
+Description = "Don't panic"
+Email = "sahib@online.de" 
+GitHub = "//github.com/sahib" # TODO:
+Lang = "en"

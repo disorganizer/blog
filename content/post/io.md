@@ -5,6 +5,8 @@ tags:   [ "Development", "Go", "brig"]
 topics: [ "Development", "Go" ]
 ---
 
+# Introduction
+
 When using Go, you can't get far without using one of ``io.Reader`` or
 ``io.Writer``. If you tinkered a bit more with the language it's also almost
 certain that you wrote a ``io.{Reader,Writer}`` yourself. In fact, ``brig``
@@ -22,7 +24,8 @@ this article tries to collect some of those *best practices* (if there is such a
 thing).
 
 We assume you already have a bit of experience in using the ``io`` package and
-it's interfaces, please refer to the documentation when unclear. (Here's)[TODO]
+it's interfaces, please refer to the documentation when unclear.
+[Here's](http://nathanleclaire.com/blog/2014/07/19/demystifying-golangs-io-dot-reader-and-io-dot-writer-interfaces/)
 also a nice and gentle introduction you might want to read first. I try to
 show some code where I feel it's necessary, but the end of the article links
 to a variety of ``io.Reader`` and ``io.Writer`` you might want look into 
@@ -49,11 +52,12 @@ type Closer  interface {
 }
 {{< /highlight >}}
 
+# Lessons learned
+
 You might notice that there is a bit more to these interfaces, than
 you might expect from a quick glance. 
 
-How much to read/write and return?
-----------------------------------
+## How much to read/write and return?
 
 There is a bit of confusion on what byte count to return when ``Read/Write`` is
 called. For ``Read()`` it's relatively straightforward: Just return the offset
@@ -90,8 +94,7 @@ Honestly enough, this might make some implementations a bit harder.  But when in
 question, do the work once on your side, otherwise the caller might give you a
 surprise visit at night to ``Read()`` your blood.
 
-Copying and chunking data
--------------------------
+# Copying and chunking data
 
 This should be obvious, but in one case I forgot to do that and spend a few
 hours debugging: you have to copy the data when using ``io.Writer``. You cannot
@@ -136,10 +139,12 @@ That said, ,,zero-copying" is not directly supported by the concept of ``Write()
 / Read()``, but you can use the  ``io.WriteTo`` and ``io.ReadFrom`` interfaces
 for this.  ``io.Copy()`` will automatically use them if present.
 
-TODO: WriteTo/ReadFrom == zero copy?
+The advantage here is that you can write and read the data in sizes you can
+dictate - therefore buffering and chunking might not be needed in this case.
+General rule of thumb is: Implement ``io.WriteTo``/``io.ReadFrom`` if you wrap
+another reader/writer and if you do (lots of) copying. 
 
-Stacking writers and readers
-----------------------------
+## Stacking writers and readers
 
 A popular use of ``io.Reader/Writer`` is stacking them up, making one
 transformation per layer. Example: ``brig`` uses this extensively by providing a
@@ -260,8 +265,7 @@ confusing. It was [inspired](https://golang.org/src/io/ioutil/ioutil.go#L114) by
 the Go's builtin ``ioutil.NopCloser`` (why the heck does this only exist for
 ``io.Reader``, not ``io.Writer``, Rob?).
 
-``Seek()`` is hard
-------------------
+## ``Seek()`` is hard
 
 ``Seek()`` is a handy interface, but when using it, it always feels like a bit
 the 1970s could ring you any moment. You probably already figured out yourself,
@@ -293,7 +297,7 @@ to document that clearly or use a different function name than ``Seek()`` which
 makes clear it's not a full ``Seek()`` implementation.
 
 [There is also](https://golang.org/pkg/io/#ReaderAt) ``ReaderAt`` which is a bit
-like a combined seek & read. You might know this from ``preadv(3)`` on (some)
+like a combined seek & read. You might know this idea from ``preadv(3)`` on (some)
 Unix-derivatives. An important difference is that it allows the caller to 
 call ``ReadAt()`` in parallel.
 Once you have ``Seek()`` you can easily implement ``ReadAt()``, although you
@@ -302,8 +306,7 @@ might need to introduce an additional locking mechanism for the parallel reads.
 By the way, if you want to go back from the end, you have to use ``SEEK_END`` with
 a negative offset. No, not a positive offset. Popular mistake.
 
-The perks of ``io.EOF``
------------------------
+## The perks of ``io.EOF``
 
 The story of EOF is a story full of misunderstandings.
 In C it was a the ``#define`` on the number ``-1`` and it was returned by
@@ -325,22 +328,19 @@ What will ``Seek()`` return? The offset of the stream end? ``io.EOF`` as error?
 Is seeking back allowed after hitting EOF?
 There is no answer, since this depends on the implementation.
 Example: For some writers it might make sense to seek over the end of the file
-and write something there --- an overlay writer (see below TODO) is a good
+and write something there --- an overlay writer (see below) is a good
 example for this. Other usecases might have different needs.
 
 *Conclusion:* You should always think about ``io.EOF`` and whether you need
 to check for it separately. If you come from other languages: reading an empty
 file in Go will return ``0 / io.EOF`` on the *first* read.
 
-An ``io`` showcase
-==================
+# Some ``io`` exhibits:
 
 To round this writing up, here are some of the more interesting
 ``io.Reader/Writers`` in ``brig``. Some might be useful in other applications:
 
-
-[SizeAccumulator](https://godoc.org/github.com/disorganizer/brig/util#SizeAccumulator)
---------------------------------------------------------------------------------------
+## [SizeAccumulator](https://godoc.org/github.com/disorganizer/brig/util#SizeAccumulator)
 
 A small ``io.Writer`` that simply counts the number of bytes written to it.
 This is very useful in conjunction with ``io.TeeReader`` to count how many 
@@ -357,17 +357,13 @@ func hello() {
 }
 {{< /highlight >}}
 
-[TimeoutWriter / TimeoutReader](https://godoc.org/github.com/disorganizer/brig/util#TimeoutWriter)
---------------------------------------------------------------------------------------------------
+## [TimeoutWriter / TimeoutReader](https://godoc.org/github.com/disorganizer/brig/util#TimeoutWriter)
 
 A ``io.Reader`` and a ``io.Writer`` that wraps another reader or writer.
 If the respective operation is not done until a certain deadline, it will
 return. Any results arriving later will be dismissed.
 
-TODO: Write.
-
-[SeekBuffer](https://godoc.org/github.com/disorganizer/brig/util#SeekBuffer)
-----------------------------------------------------------------------------
+## [SeekBuffer](https://godoc.org/github.com/disorganizer/brig/util#SeekBuffer)
 
 A ``bytes.Buffer`` that supports ``Seek()``. The ``Seek()`` call
 will move both the read and write offset. Go's ``bytes.Buffer`` does not
@@ -376,15 +372,13 @@ and because ``bytes.Buffer`` is not required to hold all data that has been
 read already. ``SeekBuffer`` is stupid and can do this therefore.
 (Never underestimate the power of stupid things.)
 
-[SyncReadWriter](https://godoc.org/github.com/disorganizer/brig/util#SyncReadWriter)
-------------------------------------------------------------------------------------
+## [SyncReadWriter](https://godoc.org/github.com/disorganizer/brig/util#SyncReadWriter)
 
 Simply a ``io.ReadWriter`` that protects each call of ``Read()`` and ``Write()``
 with a ``sync.Mutex``. Very useful for simulating a "network" where each party
 might want to write or read to the network at any time.
 
-[Tunnel](https://godoc.org/github.com/disorganizer/brig/util/tunnel)
---------------------------------------------------------------------
+## [Tunnel](https://godoc.org/github.com/disorganizer/brig/util/tunnel)
 
 A ``io.ReadWriter`` that encrypts data written to it and decrypts it on
 ``Read()``. It uses elliptic curve diffie-hellman to estimate an AES-key between
@@ -393,8 +387,7 @@ authentication, nor does it provide suitable protection against man-in-the-middl
 attacks. It's the caller's responsibility to make sure he's actually speaking to
 the right party.
 
-[Layer](https://godoc.org/github.com/disorganizer/brig/store#Layer)
--------------------------------------------------------------------
+## [Layer](https://godoc.org/github.com/disorganizer/brig/store#Layer)
 
 A ``io.ReadWriter`` that *overlays* a ``io.Reader``. Every write is cached in
 memory and merged together with the actual data on the next read.
@@ -402,22 +395,19 @@ memory and merged together with the actual data on the next read.
 data stream in order to extend the stream. Additionally the stream may be
 truncated.
 
-[compress.ReadSeeker / compress.Writer](https://godoc.org/github.com/disorganizer/brig/store/compress)
-------------------------------------------------------------------------------------------------------
+## [compress.ReadSeeker / compress.Writer](https://godoc.org/github.com/disorganizer/brig/store/compress)
 
 Compressed and decompresses input using a variety of different compression
 algorithms (``none`` is also supported). The greatest benefit compared to other
 implementations is the support for ``Seek()`` in the reader part.
 
-[encrypt.ReadSeeker / encrypt.Writer](https://godoc.org/github.com/disorganizer/brig/store/encrypt)
----------------------------------------------------------------------------------------------------
+## [encrypt.ReadSeeker / encrypt.Writer](https://godoc.org/github.com/disorganizer/brig/store/encrypt)
 
 Encrypts and decrypts input using AES-GCM or ChaCha20. The data is chunked into
 blocks (consisting of a nonce, a MAC and the data) and a header which contains
 the settings used for encryption. It supports ``Seek()`` in the reader part.
 
-Conclusion
-==========
+# Conclusion
 
 Phew, that was a lot of text. I know some of you will just skip here for a
 TL;DR. Those lazy bastards shall have this checklist:
@@ -434,10 +424,14 @@ stuff (or get inspiration from):
 
 *Remember:* You don't need to write files on disk. Use in-memory buffers
 (``&bytes.Buffer{}``!) in your tests for performance and reproducibility.
+Also try to keep your testdata small and debuggable. Testing gigabytes instead of 
+a few kilobytes just gives you more repetition, but no added safety.
 
+<!--
 TODO: Points to fix:
 
 - Embedded interfaces (easier stacking)
 - No Close() on Close()
 - bufio?
 - WriteTo/ReadFrom.
+-->
