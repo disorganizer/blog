@@ -1,55 +1,104 @@
 <!DOCTYPE html>
 <html lang="en-us">
+
 <head>
 <meta charset="utf-8">
-<meta name="description" content="">
-<meta name="keywords" content="">
-<meta name="author" content="">
-<meta name="generator" content="Hugo 0.14" />
-<meta name="viewport" content="width=device-width, initial-scale=1">
-<link rel="stylesheet" href="https://disorganizer.github.io/blog/css/style.css" type="text/css">
-<link rel="stylesheet" href="https://fonts.googleapis.com/css?family=Source+Code+Pro:400,700" type="text/css">
-<link rel="alternate" href="https://disorganizer.github.io/blog/index.xml" type="application/rss+xml" title="brig devlog">
-<title>Source Layout - brig devlog</title>
+<meta http-equiv="X-UA-Compatible" content="chrome=1">
+<meta name="HandheldFriendly" content="True">
+<meta name="MobileOptimized" content="320">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="description" content="Don&#39;t panic">
+
+<base href="https://disorganizer.github.io/blog">
+<title>
+
+
+     Source Layout 
+
+</title>
+<link rel="canonical" href="https://disorganizer.github.io/blog/post/source_layout/">
+
+
+<script type="text/javascript">
+    var baseURL = 'https:\/\/disorganizer.github.io\/blog';
+    var host = baseURL.substring(0, baseURL.length - 1).replace(/\//g, '');
+    if ((host === window.location.host) && (window.location.protocol !== 'https:')) {
+        window.location.protocol = 'https:';
+    }
+</script>
+
+
+
+
+
+<link rel="stylesheet" href="https://disorganizer.github.io/blog/css/reset.css">
+<link rel="stylesheet" href="https://disorganizer.github.io/blog/css/pygments.css">
+<link rel="stylesheet" href="https://disorganizer.github.io/blog/css/main.css">
+
+
+
+
+
+
+<link rel="shortcut icon"
+
+    href="https://disorganizer.github.io/blog/img/favicon.ico"
+
+>
+
+
+
 </head>
-<body>
-
-<header>
-  <div class="container">
-    <a class="path" href="https://disorganizer.github.io/blog">[brig devlog]</a>
-    <span class="caret"># _</span>
-  </div>
-</header>
-
-<div class="container">
 
 
-<main role="main" class="article">
-  
-<article class="single" itemscope itemtype="http://schema.org/BlogPosting">
-  <div class="meta">
+<body lang="en">
 
-    <span class="key">published on</span>
-    <span class="val"><time itemprop="datePublished" datetime="2016-02-11">February 11, 2016</time></span>
+<section class="header"> 
+    <div class="container">
+        <div class="content">
+            <a href="https://disorganizer.github.io/blog/"><div class="name">Chris Pahl</div></a>
+            <nav>
+                <ul>
+                    <a href="https://disorganizer.github.io/blog/blog/"><li>Blog</li></a>
+                    <a href="https://disorganizer.github.io/blog/about/"><li>About</li></a>
+                    <a href="https://disorganizer.github.io/blog/code/"><li>Code</li></a>
+                </ul>
+            </nav>
+        </div>
+    </div>
+</section>
 
+<section class="icons">
+    <div class="container">
+        <div class="content">
 
+        
+            <a href="//github.com/sahib" target="_blank">
+                <i class="icon ion-social-github"></i>
+            </a>
+        
+        
+        
 
-    <br>
-    <span class="key">tags:</span>
-    <span class="val">
+        
 
-        <a href="https://disorganizer.github.io/blogtags/development">Development</a>
+        
 
-        <a href="https://disorganizer.github.io/blogtags/go">Go</a>
+        
 
-        <a href="https://disorganizer.github.io/blogtags/brig">brig</a>
+        
+            <a href="mailto:sahib@online.de">
+                <i class="icon ion-ios-email larger"></i>
+            </a>
+        
+        </div>
+    </div>
+</section>
 
-    </span>
-
-  </div>
-  <h1 class="headline" itemprop="headline">Source Layout</h1>
-  <section class="body" itemprop="articleBody">
-    <p>Hi there. Today&rsquo;s blog post is a unsorted notepad of how <code>brig</code>&rsquo;s source is
+<section class="main">
+    <div class="container">
+        <div class="content">
+            <p>Hi there. Today&rsquo;s blog post is a unsorted notepad of how <code>brig</code>&rsquo;s source is
 currently layout and what the big picture behind is supposed to look like.</p>
 
 <p>Now that <code>brig</code> is already a mid-sized codebase (when did we get to 7k lines
@@ -58,7 +107,7 @@ interact. Here&rsquo;s the <code>tree(1)</code> output of the git repository at 
 writing. I allowed myself to reduce it to the most relevant files, also skipping
 tests and rather unimportant subdirectories:</p>
 
-<p><div class="highlight" style="background: #272822"><pre style="line-height: 125%"><span style="color: #f8f8f2">$ </span>tree | grep -v <span style="color: #e6db74">&#39;unimportant&#39;</span> .
+<div class="highlight" style="background: #272822"><pre style="line-height: 125%"><span></span>$ tree <span style="color: #f8f8f2">|</span> grep -v <span style="color: #e6db74">&#39;unimportant&#39;</span> .
 ├── doc.go            <span style="color: #75715e"># Top-level documentation.</span>
 ├── Makefile          <span style="color: #75715e"># Makefile with often used tools.</span>
 ├── brig              <span style="color: #75715e"># Source of the `brig` binary...</span>
@@ -111,7 +160,7 @@ tests and rather unimportant subdirectories:</p>
 │   └── std.go        <span style="color: #75715e"># Standard utils that should be in the standard lib.</span>
 └── version.go        <span style="color: #75715e"># Semantic versioning of the brig util/library.</span>
 </pre></div>
-</p>
+
 
 <p>You might already have an idea how <code>brig</code> is working by now. There&rsquo;s a
 command-line utility that speaks to a daemon that was somehow started, which
@@ -140,19 +189,12 @@ share files - <code>ipfs</code> will make sure to load it from the swarm.</p>
 
 <p>It&rsquo;s late here, so that&rsquo;s it for today.</p>
 
-  </section>
-</article>
+        </div>
+    </div>
+</section>
 
-</main>
 
 
-</div>
-
-<footer>
-  <div class="container">
-    <span class="copyright">&copy; 2016  brig devlog - <a rel="license" href="http://creativecommons.org/licenses/by/4.0/">CC BY 4.0</a></span>
-  </div>
-</footer>
 
 </body>
 </html>
