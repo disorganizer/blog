@@ -1,151 +1,181 @@
 <!DOCTYPE html>
-<html lang="en-us">
+<html>
+  <head>
+    <meta charset="utf-8">
+    <meta name="generator" content="Hugo 0.16-DEV" />
 
-<head>
-<meta charset="utf-8">
-<meta http-equiv="X-UA-Compatible" content="chrome=1">
-<meta name="HandheldFriendly" content="True">
-<meta name="MobileOptimized" content="320">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
-<meta name="description" content="Don&#39;t panic">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1">
+    <link rel='stylesheet' href='//fonts.googleapis.com/css?family=Open+Sans|Lobster'>
+    <link rel="stylesheet" href="//maxcdn.bootstrapcdn.com/bootstrap/3.3.6/css/bootstrap.min.css" integrity="sha384-1q8mTJOASx8j1Au+a5WDVnPi2lkFfwwEAa8hDDdjZlpLegxhjVME1fgjWPGmkzs7" crossorigin="anonymous">
+    <link rel="stylesheet" href="//maxcdn.bootstrapcdn.com/font-awesome/4.5.0/css/font-awesome.min.css">
+    <link rel="stylesheet" href="//cdnjs.cloudflare.com/ajax/libs/highlight.js/8.4/styles/solarized_dark.min.css">
+    <link rel="stylesheet" href="https://disorganizer.github.io/blog/css/styles.css">
+    <link rel="stylesheet" href="https://disorganizer.github.io/blog/css/custom.css">
+    <link rel="alternate" type="application/rss+xml" title="RSS" href="https://disorganizer.github.io/blog/index.xml">
 
-<base href="https://disorganizer.github.io/blog">
-<title>
+    
+    <title>Development - brig devlog</title>
+    <meta property='og:title' content="Development - brig devlog">
+    <meta property="og:type" content="article">
+    
 
+    <meta property="og:url" content="https://disorganizer.github.io/blog/tags/development/">
+    
+    
 
-     Development 
+  </head>
 
-</title>
-<link rel="canonical" href="https://disorganizer.github.io/blog/tags/development/">
+  <body>
 
-
-<script type="text/javascript">
-    var baseURL = 'https:\/\/disorganizer.github.io\/blog';
-    var host = baseURL.substring(0, baseURL.length - 1).replace(/\//g, '');
-    if ((host === window.location.host) && (window.location.protocol !== 'https:')) {
-        window.location.protocol = 'https:';
-    }
-</script>
-
-
-
-
-
-<link rel="stylesheet" href="https://disorganizer.github.io/blog/css/reset.css">
-<link rel="stylesheet" href="https://disorganizer.github.io/blog/css/pygments.css">
-<link rel="stylesheet" href="https://disorganizer.github.io/blog/css/main.css">
-
-
-
-
-
-
-<link rel="shortcut icon"
-
-    href="https://disorganizer.github.io/blog/img/favicon.ico"
-
->
-
-
-
-</head>
-
-
-<body lang="en">
-
-<section class="header"> 
     <div class="container">
-        <div class="content">
-            <a href="https://disorganizer.github.io/blog/"><div class="name">Chris Pahl</div></a>
-            <nav>
-                <ul>
-                    <a href="https://disorganizer.github.io/blog/blog/"><li>Blog</li></a>
-                    <a href="https://disorganizer.github.io/blog/about/"><li>About</li></a>
-                    <a href="https://disorganizer.github.io/blog/code/"><li>Code</li></a>
-                </ul>
-            </nav>
-        </div>
+      <header class="site">
+        <div class="title"><a href="https://disorganizer.github.io/blog">brig devlog</a></div>
+      </header>
     </div>
-</section>
 
-<section class="icons">
+    <div class="container site">
+
+<div class="list">
+
+  <header class="title"><h1>Development</h1></header>
+
+  
+  <article class="li">
+  <a href="https://disorganizer.github.io/blog/post/io/">
+
+    <header class="clearfix">
+      <div class="pull-left">
+        <div class="image" style="background-image: url(https://disorganizer.github.io/blogimages/default.jpg);"></div>
+      </div>
+
+      <div class="detail">
+        <time>Feb 22, 2016</time>
+        <h2 class="title">The semantics of io</h2>
+      </div>
+    </header>
+
+    <div class="summary">Introduction When using Go, you can&rsquo;t get far without using one of io.Reader or io.Writer. If you tinkered a bit more with the language it&rsquo;s also almost certain that you wrote a io.{Reader,Writer} yourself. In fact, brig currently implements 9 io.Writer and 7 io.Reader, 4 of them with additional support for io.Seeker. Some of them closable, some not. Some of them wrapping other writers, some not. It&rsquo;s a great concept, since they&rsquo;re very re-usable and allow a program to operate on arbitrary streams of data, without being bound on where the data actually comes from.</div>
+  </a>
+</article>
+
+  
+  <article class="li">
+  <a href="https://disorganizer.github.io/blog/post/source_layout/">
+
+    <header class="clearfix">
+      <div class="pull-left">
+        <div class="image" style="background-image: url(https://disorganizer.github.io/blogimages/default.jpg);"></div>
+      </div>
+
+      <div class="detail">
+        <time>Feb 11, 2016</time>
+        <h2 class="title">Source Layout</h2>
+      </div>
+    </header>
+
+    <div class="summary">Hi there. Today&rsquo;s blog post is a unsorted notepad of how brig&rsquo;s source is currently layout and what the big picture behind is supposed to look like. Now that brig is already a mid-sized codebase (when did we get to 7k lines of code?), it might be worthwhile to show what packages we have and how they interact. Here&rsquo;s the tree(1) output of the git repository at the time of writing.</div>
+  </a>
+</article>
+
+  
+  <article class="li">
+  <a href="https://disorganizer.github.io/blog/post/the_write_layer/">
+
+    <header class="clearfix">
+      <div class="pull-left">
+        <div class="image" style="background-image: url(https://disorganizer.github.io/blogimages/default.jpg);"></div>
+      </div>
+
+      <div class="detail">
+        <time>Feb 1, 2016</time>
+        <h2 class="title">The write layer</h2>
+      </div>
+    </header>
+
+    <div class="summary">A bit more than a week since the last post, I&rsquo;m getting worse again. Screw it. Besides a lot of personal life stuff a major &ldquo;problem&rdquo; was solved: Writing to files. Doesn&rsquo;t sound like an impressive problem, I know. But how is brig able to modify existing files by writing somewhere in them, extending them or truncating them to some size? With the cli interface it&rsquo;s not much of a problem, a simple brig add updates the file: $ echo -n &#39;What now?&#39; &gt; file.txt $ brig add file.txt &amp;&amp; brig cat file.txt What now?</div>
+  </a>
+</article>
+
+  
+  <article class="li">
+  <a href="https://disorganizer.github.io/blog/post/fuse_it_together/">
+
+    <header class="clearfix">
+      <div class="pull-left">
+        <div class="image" style="background-image: url(https://disorganizer.github.io/blogimages/default.jpg);"></div>
+      </div>
+
+      <div class="detail">
+        <time>Jan 19, 2016</time>
+        <h2 class="title">Fusing it together</h2>
+      </div>
+    </header>
+
+    <div class="summary">Another productive day, another update late in the night. A basic FUSE layer is integrated and is already able to display the contents of a util.trie.Trie as files and directories. Reading and writing is not yet implemented, since that&rsquo;s the part where fuse and brig actually need to&hellip; fuse. Here&rsquo;s a small session inside the fuse layer: λ ~ → brig mount /tmp/mount &amp;&amp; cd /tmp/mount λ /tmp/mount → touch hello # Creating file work.</div>
+  </a>
+</article>
+
+  
+  <article class="li">
+  <a href="https://disorganizer.github.io/blog/post/bolt_and_fingerprint/">
+
+    <header class="clearfix">
+      <div class="pull-left">
+        <div class="image" style="background-image: url(https://disorganizer.github.io/blogimages/default.jpg);"></div>
+      </div>
+
+      <div class="detail">
+        <time>Jan 16, 2016</time>
+        <h2 class="title">Stacking closures and more</h2>
+      </div>
+    </header>
+
+    <div class="summary">A bit more than one day after the last post. Not too bad. Basically, three smaller things happened since the last time. First, we now store files serialized as protobufs in the index persistently. The index is just a BoltDB database file (which I can recommend, it&rsquo;s nice). Secondly, the AES-key for each file is generated from the sha512 hash of the first 8KB of a file. We don&rsquo;t hash the full file for performance reasons, but there is nothing stopping us from hashing the whole file, so we fully apply to Wikipedia&rsquo;s definiton of convergent encryption.</div>
+  </a>
+</article>
+
+  
+  <article class="li">
+  <a href="https://disorganizer.github.io/blog/post/first_steps/">
+
+    <header class="clearfix">
+      <div class="pull-left">
+        <div class="image" style="background-image: url(https://disorganizer.github.io/blogimages/default.jpg);"></div>
+      </div>
+
+      <div class="detail">
+        <time>Jan 15, 2016</time>
+        <h2 class="title">A brig step for mankind</h2>
+      </div>
+    </header>
+
+    <div class="summary">A small historic moment was achieved today: The very first file was added to brig. There was no way to get it out again, but hey - Progress comes in steps. Luckily, just two hours later there was a brig get command that could retrieve the file again from ipfs. This is also my very first devlog entry, so&hellip; Hi. I mainly write this to remember what I did (and when) on the course of the project.</div>
+  </a>
+</article>
+
+  
+
+  
+
+
+</div>
+    </div>
+
     <div class="container">
-        <div class="content">
-
-        
-            <a href="//github.com/sahib" target="_blank">
-                <i class="icon ion-social-github"></i>
-            </a>
-        
-        
-        
-
-        
-
-        
-
-        
-
-        
-            <a href="mailto:sahib@online.de">
-                <i class="icon ion-ios-email larger"></i>
-            </a>
-        
-        </div>
+      <footer class="site">
+        <p>&copy; 2016 Chris Pahl</p>
+        <p>Powered by <a href="http://gohugo.io" target="_blank">Hugo</a>,</p>
+        <p>Theme <a href="https://github.com/dim0627/hugo_theme_aglaus" target="_blank">Aglaus</a> designed by <a href="http://yet.unresolved.xyz" target="_blank">Daisuke Tsuji</a></p>
+      </footer>
     </div>
-</section>
 
-<section class="main">
-    <div class="container">
-        <div class="content">
-            <div class="page-heading">Blog</div>
-            <ul>
-                
-                <li class="post-item">
-    <div class="meta">Feb 22, 2016</div>
-    <a href="https://disorganizer.github.io/blog/post/io/"><div>The semantics of io</div></a>
-</li>
+    <script src="//code.jquery.com/jquery-2.1.3.min.js"></script>
+    <script src="//maxcdn.bootstrapcdn.com/bootstrap/3.3.6/js/bootstrap.min.js" integrity="sha384-0mSbJDEHialfmuBBQP6A4Qrprq5OVfW37PRR3j5ELqxss1yVqOtnepnHVP9aJ7xS" crossorigin="anonymous"></script>
+    <script src="//cdnjs.cloudflare.com/ajax/libs/highlight.js/8.4/highlight.min.js"></script>
+    <script>hljs.initHighlightingOnLoad();</script>
 
-                
-                <li class="post-item">
-    <div class="meta">Feb 11, 2016</div>
-    <a href="https://disorganizer.github.io/blog/post/source_layout/"><div>Source Layout</div></a>
-</li>
+    
 
-                
-                <li class="post-item">
-    <div class="meta">Feb 1, 2016</div>
-    <a href="https://disorganizer.github.io/blog/post/the_write_layer/"><div>The write layer</div></a>
-</li>
-
-                
-                <li class="post-item">
-    <div class="meta">Jan 19, 2016</div>
-    <a href="https://disorganizer.github.io/blog/post/fuse_it_together/"><div>Fusing it together</div></a>
-</li>
-
-                
-                <li class="post-item">
-    <div class="meta">Jan 16, 2016</div>
-    <a href="https://disorganizer.github.io/blog/post/bolt_and_fingerprint/"><div>Stacking closures and more</div></a>
-</li>
-
-                
-                <li class="post-item">
-    <div class="meta">Jan 15, 2016</div>
-    <a href="https://disorganizer.github.io/blog/post/first_steps/"><div>A brig step for mankind</div></a>
-</li>
-
-                
-            </ul>
-        </div>
-    </div>
-</section>
-
-
-
-
-</body>
+  </body>
 </html>
-
 

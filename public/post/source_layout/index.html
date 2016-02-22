@@ -1,104 +1,87 @@
 <!DOCTYPE html>
-<html lang="en-us">
+<html>
+  <head>
+    <meta charset="utf-8">
+    <meta name="generator" content="Hugo 0.16-DEV" />
 
-<head>
-<meta charset="utf-8">
-<meta http-equiv="X-UA-Compatible" content="chrome=1">
-<meta name="HandheldFriendly" content="True">
-<meta name="MobileOptimized" content="320">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
-<meta name="description" content="Don&#39;t panic">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1">
+    <link rel='stylesheet' href='//fonts.googleapis.com/css?family=Open+Sans|Lobster'>
+    <link rel="stylesheet" href="//maxcdn.bootstrapcdn.com/bootstrap/3.3.6/css/bootstrap.min.css" integrity="sha384-1q8mTJOASx8j1Au+a5WDVnPi2lkFfwwEAa8hDDdjZlpLegxhjVME1fgjWPGmkzs7" crossorigin="anonymous">
+    <link rel="stylesheet" href="//maxcdn.bootstrapcdn.com/font-awesome/4.5.0/css/font-awesome.min.css">
+    <link rel="stylesheet" href="//cdnjs.cloudflare.com/ajax/libs/highlight.js/8.4/styles/solarized_dark.min.css">
+    <link rel="stylesheet" href="https://disorganizer.github.io/blog/css/styles.css">
+    <link rel="stylesheet" href="https://disorganizer.github.io/blog/css/custom.css">
+    <link rel="alternate" type="application/rss+xml" title="RSS" href="https://disorganizer.github.io/blog/index.xml">
 
-<base href="https://disorganizer.github.io/blog">
-<title>
+    
+    <title>Source Layout - brig devlog</title>
+    <meta property='og:title' content="Source Layout - brig devlog">
+    <meta property="og:type" content="article">
+    
 
+    <meta property="og:url" content="https://disorganizer.github.io/blog/post/source_layout/">
+    
+    
 
-     Source Layout 
+  </head>
 
-</title>
-<link rel="canonical" href="https://disorganizer.github.io/blog/post/source_layout/">
+  <body>
 
-
-<script type="text/javascript">
-    var baseURL = 'https:\/\/disorganizer.github.io\/blog';
-    var host = baseURL.substring(0, baseURL.length - 1).replace(/\//g, '');
-    if ((host === window.location.host) && (window.location.protocol !== 'https:')) {
-        window.location.protocol = 'https:';
-    }
-</script>
-
-
-
-
-
-<link rel="stylesheet" href="https://disorganizer.github.io/blog/css/reset.css">
-<link rel="stylesheet" href="https://disorganizer.github.io/blog/css/pygments.css">
-<link rel="stylesheet" href="https://disorganizer.github.io/blog/css/main.css">
-
-
-
-
-
-
-<link rel="shortcut icon"
-
-    href="https://disorganizer.github.io/blog/img/favicon.ico"
-
->
-
-
-
-</head>
-
-
-<body lang="en">
-
-<section class="header"> 
     <div class="container">
-        <div class="content">
-            <a href="https://disorganizer.github.io/blog/"><div class="name">Chris Pahl</div></a>
-            <nav>
-                <ul>
-                    <a href="https://disorganizer.github.io/blog/blog/"><li>Blog</li></a>
-                    <a href="https://disorganizer.github.io/blog/about/"><li>About</li></a>
-                    <a href="https://disorganizer.github.io/blog/code/"><li>Code</li></a>
-                </ul>
-            </nav>
-        </div>
+      <header class="site">
+        <div class="title"><a href="https://disorganizer.github.io/blog">brig devlog</a></div>
+      </header>
     </div>
-</section>
 
-<section class="icons">
-    <div class="container">
-        <div class="content">
+    <div class="container site">
 
-        
-            <a href="//github.com/sahib" target="_blank">
-                <i class="icon ion-social-github"></i>
-            </a>
-        
-        
-        
 
-        
+<div class="single">
+  <article class="single" itemscope="itemscope" itemtype="http://schema.org/Article">
 
-        
-
-        
-
-        
-            <a href="mailto:sahib@online.de">
-                <i class="icon ion-ios-email larger"></i>
-            </a>
-        
-        </div>
+    <meta itemprop="mainEntityOfPage"  itemType="https://schema.org/WebPage" content="https://disorganizer.github.io/blog"/>
+    <meta itemprop="dateModified" content="2016-02-11T19:26:59&#43;01:00">
+    <meta itemprop="headline" content="Source Layout">
+    <meta itemprop="description" content="Hi there. Today&rsquo;s blog post is a unsorted notepad of how brig&rsquo;s source is currently layout and what the big picture behind is supposed to look like. Now that brig is already a mid-sized codebase (when did we get to 7k lines of code?), it might be worthwhile to show what packages we have and how they interact. Here&rsquo;s the tree(1) output of the git repository at the time of writing.">
+    <meta itemprop="url" content="https://disorganizer.github.io/blog/post/source_layout/">
+    <div itemprop="image" itemscope itemtype="https://schema.org/ImageObject">
+      <meta itemprop="url" content="https://disorganizer.github.io/blogimages/default.jpg" />
+      <meta itemprop="width" content="800">
+      <meta itemprop="height" content="800">
     </div>
-</section>
+    <div itemprop="publisher" itemscope itemtype="https://schema.org/Organization">
+      <div itemprop="logo" itemscope itemtype="https://schema.org/ImageObject">
+        <meta itemprop="url" content="https://disorganizer.github.io/blogimages/logo.jpg">
+        <meta itemprop="width" content="100">
+        <meta itemprop="height" content="100">
+      </div>
+      <meta itemprop="name" content="brig devlog">
+    </div>
+    <div itemprop="author" itemscope itemtype="https://schema.org/Person">
+      <meta itemprop="name" content="Chris Pahl">
+    </div>
 
-<section class="main">
-    <div class="container">
-        <div class="content">
-            <p>Hi there. Today&rsquo;s blog post is a unsorted notepad of how <code>brig</code>&rsquo;s source is
+    <header class="clearfix">
+      <div class="pull-left">
+        <div class="image" style="background-image: url(https://disorganizer.github.io/blogimages/default.jpg);"></div>
+      </div>
+
+      <div class="detail">
+        <time>Feb 11, 2016</time>
+        <h1 class="title">Source Layout</h1>
+      </div>
+    </header>
+
+    <div class="share">
+      <a href="http://www.facebook.com/sharer.php?src=bm&u=https%3a%2f%2fdisorganizer.github.io%2fblog%2fpost%2fsource_layout%2f&t=Source%20Layout" onclick="window.open(this.href, 'PCwindow', 'width=550, height=350, menubar=no, toolbar=no, scrollbars=yes'); return false;"><i class="fa fa-facebook"></i></a>
+      <a href="http://twitter.com/intent/tweet?url=https%3a%2f%2fdisorganizer.github.io%2fblog%2fpost%2fsource_layout%2f&text=Source%20Layout&tw_p=tweetbutton" onclick="window.open(this.href, 'PCwindow', 'width=550, height=350, menubar=no, toolbar=no, scrollbars=yes'); return false;"><i class="fa fa-twitter"></i></a>
+      <a href="https://plus.google.com/share?url=https%3a%2f%2fdisorganizer.github.io%2fblog%2fpost%2fsource_layout%2f" onclick="window.open(this.href, 'PCwindow', 'width=550, height=350, menubar=no, toolbar=no, scrollbars=yes'); return false;"><i class="fa fa-google-plus"></i></a>
+      <a href="http://getpocket.com/edit?url=https%3a%2f%2fdisorganizer.github.io%2fblog%2fpost%2fsource_layout%2f&title=Source%20Layout" onclick="window.open(this.href, 'PCwindow', 'width=550, height=350, menubar=no, toolbar=no, scrollbars=yes'); return false;"><i class="fa fa-get-pocket"></i></a>
+    </div>
+
+    
+
+    <div class="article-body" itemprop="articleBody"><p>Hi there. Today&rsquo;s blog post is a unsorted notepad of how <code>brig</code>&rsquo;s source is
 currently layout and what the big picture behind is supposed to look like.</p>
 
 <p>Now that <code>brig</code> is already a mid-sized codebase (when did we get to 7k lines
@@ -107,59 +90,59 @@ interact. Here&rsquo;s the <code>tree(1)</code> output of the git repository at 
 writing. I allowed myself to reduce it to the most relevant files, also skipping
 tests and rather unimportant subdirectories:</p>
 
-<div class="highlight" style="background: #272822"><pre style="line-height: 125%"><span></span>$ tree <span style="color: #f8f8f2">|</span> grep -v <span style="color: #e6db74">&#39;unimportant&#39;</span> .
-├── doc.go            <span style="color: #75715e"># Top-level documentation.</span>
-├── Makefile          <span style="color: #75715e"># Makefile with often used tools.</span>
-├── brig              <span style="color: #75715e"># Source of the `brig` binary...</span>
-│   └── brig.go       <span style="color: #75715e"># ...which just calls into cmdline.*</span>
-├── cmdline           <span style="color: #75715e"># Actual implementation of the cli.</span>
-│   ├── handlers.go   <span style="color: #75715e"># Handler function for each subcommand.</span>
-│   └── parser.go     <span style="color: #75715e"># Subcommand definitions are in here.</span>
-├── daemon            <span style="color: #75715e"># Implement the daemon/client process and io.</span>
-│   ├── client.go     <span style="color: #75715e"># client side daemon io.</span>
-│   ├── server.go     <span style="color: #75715e"># Server side daemon io.</span>
-│   ├── handlers.go   <span style="color: #75715e"># Server handler for each daemon command.</span>
-│   └── operations.go <span style="color: #75715e"># Client handler for each daemon command.</span>
-├── fuse              <span style="color: #75715e"># Implementation of `brigfs`</span>
-│   ├── directory.go  <span style="color: #75715e"># Logic for directory nodes.</span>
-│   ├── entry.go      <span style="color: #75715e"># Logic for regular files.</span>
-│   ├── handle.go     <span style="color: #75715e"># Logic for open()&#39;d nodes.</span>
-│   ├── fs.go         <span style="color: #75715e"># Filesystem entry; defines the root node.</span>
-│   └── mount.go      <span style="color: #75715e"># Mount utility.</span>
-├── im                <span style="color: #75715e"># XMPP communication layer.</span>
-│   ├── client.go     <span style="color: #75715e"># A generic otr-enabled xmpp client.</span>
-│   ├── finger.go     <span style="color: #75715e"># Fingerprint and key storage of each user.</span>
-├── repo              <span style="color: #75715e"># Code for filesystem repository handling.</span>
-│   ├── config/       <span style="color: #75715e"># Config value retrieval and default config.</span>
-│   ├── global/       <span style="color: #75715e"># Global config handling (~/.brig/)</span>
-│   ├── id.go         <span style="color: #75715e"># File locking (TODO: move to open.go?)</span>
-│   ├── init.go       <span style="color: #75715e"># Code to initialize a new empty repo.</span>
-│   ├── locate.go     <span style="color: #75715e"># Tool to find the repo root path.</span>
-│   ├── open.go       <span style="color: #75715e"># Code to lock/unlock a repository.</span>
-│   ├── pwd.go        <span style="color: #75715e"># Password handling.</span>
-│   └── repo.go       <span style="color: #75715e"># The repository structure itself.</span>
-├── store             <span style="color: #75715e"># The actual core: file structs and ipfs handling.</span>
-│   ├── compress/     <span style="color: #75715e"># Seekable compression IO Layer using snappy.</span>
-│   ├── encrypt/      <span style="color: #75715e"># Seekable encryption IO Layer.</span>
-│   ├── format-util/  <span style="color: #75715e"># Compress&amp;Encryption util for brigs file format.</span>
-│   ├── commit.go     <span style="color: #75715e"># Versioning handling.</span>
-│   ├── file.go       <span style="color: #75715e"># Implement the file struct and the implicit trie.</span>
-│   ├── hash.go       <span style="color: #75715e"># wrapper around jbenet/multihash&#39;s implementation.</span>
-│   ├── index.go      <span style="color: #75715e"># Implementation of add/rm/cat/checkout...</span>
-│   ├── overlay.go    <span style="color: #75715e"># A write overlay of a immutable io.Reader for fuse.</span>
-│   ├── stream.go     <span style="color: #75715e"># Stack encryption and compression.</span>
-├── util              <span style="color: #75715e"># General utilities.</span>
-│   ├── colors/       <span style="color: #75715e"># ASCII-terminal color code colorizing.</span>
-│   ├── filelock/     <span style="color: #75715e"># Filelocking (used for the global repo)</span>
-│   ├── ipfsutil/     <span style="color: #75715e"># Utils around the ipfs libraries.</span>
-│   ├── log/          <span style="color: #75715e"># A colorful log-formatter for `logrus`</span>
-│   ├── security/     <span style="color: #75715e"># security related utilites (scrypt simplified)</span>
-│   ├── testutil/     <span style="color: #75715e"># Utils used in various tests.</span>
-│   ├── trie/         <span style="color: #75715e"># A re-usable radix-trie for absolute file paths.</span>
-│   ├── tunnel/       <span style="color: #75715e"># An io.ReadWriter that pipes through ECDH and AES.</span>
-│   └── std.go        <span style="color: #75715e"># Standard utils that should be in the standard lib.</span>
-└── version.go        <span style="color: #75715e"># Semantic versioning of the brig util/library.</span>
-</pre></div>
+<div class="highlight"><pre><code class="language-bash" data-lang="bash"><span></span>$ tree <span class="p">|</span> grep -v <span class="s1">&#39;unimportant&#39;</span> .
+├── doc.go            <span class="c1"># Top-level documentation.</span>
+├── Makefile          <span class="c1"># Makefile with often used tools.</span>
+├── brig              <span class="c1"># Source of the `brig` binary...</span>
+│   └── brig.go       <span class="c1"># ...which just calls into cmdline.*</span>
+├── cmdline           <span class="c1"># Actual implementation of the cli.</span>
+│   ├── handlers.go   <span class="c1"># Handler function for each subcommand.</span>
+│   └── parser.go     <span class="c1"># Subcommand definitions are in here.</span>
+├── daemon            <span class="c1"># Implement the daemon/client process and io.</span>
+│   ├── client.go     <span class="c1"># client side daemon io.</span>
+│   ├── server.go     <span class="c1"># Server side daemon io.</span>
+│   ├── handlers.go   <span class="c1"># Server handler for each daemon command.</span>
+│   └── operations.go <span class="c1"># Client handler for each daemon command.</span>
+├── fuse              <span class="c1"># Implementation of `brigfs`</span>
+│   ├── directory.go  <span class="c1"># Logic for directory nodes.</span>
+│   ├── entry.go      <span class="c1"># Logic for regular files.</span>
+│   ├── handle.go     <span class="c1"># Logic for open()&#39;d nodes.</span>
+│   ├── fs.go         <span class="c1"># Filesystem entry; defines the root node.</span>
+│   └── mount.go      <span class="c1"># Mount utility.</span>
+├── im                <span class="c1"># XMPP communication layer.</span>
+│   ├── client.go     <span class="c1"># A generic otr-enabled xmpp client.</span>
+│   ├── finger.go     <span class="c1"># Fingerprint and key storage of each user.</span>
+├── repo              <span class="c1"># Code for filesystem repository handling.</span>
+│   ├── config/       <span class="c1"># Config value retrieval and default config.</span>
+│   ├── global/       <span class="c1"># Global config handling (~/.brig/)</span>
+│   ├── id.go         <span class="c1"># File locking (TODO: move to open.go?)</span>
+│   ├── init.go       <span class="c1"># Code to initialize a new empty repo.</span>
+│   ├── locate.go     <span class="c1"># Tool to find the repo root path.</span>
+│   ├── open.go       <span class="c1"># Code to lock/unlock a repository.</span>
+│   ├── pwd.go        <span class="c1"># Password handling.</span>
+│   └── repo.go       <span class="c1"># The repository structure itself.</span>
+├── store             <span class="c1"># The actual core: file structs and ipfs handling.</span>
+│   ├── compress/     <span class="c1"># Seekable compression IO Layer using snappy.</span>
+│   ├── encrypt/      <span class="c1"># Seekable encryption IO Layer.</span>
+│   ├── format-util/  <span class="c1"># Compress&amp;Encryption util for brigs file format.</span>
+│   ├── commit.go     <span class="c1"># Versioning handling.</span>
+│   ├── file.go       <span class="c1"># Implement the file struct and the implicit trie.</span>
+│   ├── hash.go       <span class="c1"># wrapper around jbenet/multihash&#39;s implementation.</span>
+│   ├── index.go      <span class="c1"># Implementation of add/rm/cat/checkout...</span>
+│   ├── overlay.go    <span class="c1"># A write overlay of a immutable io.Reader for fuse.</span>
+│   ├── stream.go     <span class="c1"># Stack encryption and compression.</span>
+├── util              <span class="c1"># General utilities.</span>
+│   ├── colors/       <span class="c1"># ASCII-terminal color code colorizing.</span>
+│   ├── filelock/     <span class="c1"># Filelocking (used for the global repo)</span>
+│   ├── ipfsutil/     <span class="c1"># Utils around the ipfs libraries.</span>
+│   ├── log/          <span class="c1"># A colorful log-formatter for `logrus`</span>
+│   ├── security/     <span class="c1"># security related utilites (scrypt simplified)</span>
+│   ├── testutil/     <span class="c1"># Utils used in various tests.</span>
+│   ├── trie/         <span class="c1"># A re-usable radix-trie for absolute file paths.</span>
+│   ├── tunnel/       <span class="c1"># An io.ReadWriter that pipes through ECDH and AES.</span>
+│   └── std.go        <span class="c1"># Standard utils that should be in the standard lib.</span>
+└── version.go        <span class="c1"># Semantic versioning of the brig util/library.</span>
+</code></pre></div>
 
 
 <p>You might already have an idea how <code>brig</code> is working by now. There&rsquo;s a
@@ -188,14 +171,38 @@ As long as we manage to get the hashes and keys across XMPP, we successfully
 share files - <code>ipfs</code> will make sure to load it from the swarm.</p>
 
 <p>It&rsquo;s late here, so that&rsquo;s it for today.</p>
+</div>
 
-        </div>
+    <aside>
+
+      <div class="section"><a href="https://disorganizer.github.io/blogtags/development" class="tag">Development</a><a href="https://disorganizer.github.io/blogtags/go" class="tag">Go</a><a href="https://disorganizer.github.io/blogtags/brig" class="tag">brig</a></div>
+
+      
+      
+      
+
+    </aside>
+
+  </article>
+</div>
+
     </div>
-</section>
 
+    <div class="container">
+      <footer class="site">
+        <p>&copy; 2016 Chris Pahl</p>
+        <p>Powered by <a href="http://gohugo.io" target="_blank">Hugo</a>,</p>
+        <p>Theme <a href="https://github.com/dim0627/hugo_theme_aglaus" target="_blank">Aglaus</a> designed by <a href="http://yet.unresolved.xyz" target="_blank">Daisuke Tsuji</a></p>
+      </footer>
+    </div>
 
+    <script src="//code.jquery.com/jquery-2.1.3.min.js"></script>
+    <script src="//maxcdn.bootstrapcdn.com/bootstrap/3.3.6/js/bootstrap.min.js" integrity="sha384-0mSbJDEHialfmuBBQP6A4Qrprq5OVfW37PRR3j5ELqxss1yVqOtnepnHVP9aJ7xS" crossorigin="anonymous"></script>
+    <script src="//cdnjs.cloudflare.com/ajax/libs/highlight.js/8.4/highlight.min.js"></script>
+    <script>hljs.initHighlightingOnLoad();</script>
 
+    
 
-</body>
+  </body>
 </html>
 
